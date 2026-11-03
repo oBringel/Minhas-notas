@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minhas Notas</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg fill='%23ff7eb6'%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(72 20 20)'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(144 20 20)'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(216 20 20)'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(288 20 20)'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='5' fill='%23ffd966'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="hero">
+  <div class="hero-text">
+    <h1>Minhas Notas</h1>
+    <p>Anotações e checklists num cantinho só seu.</p>
+  </div>
+  <svg class="hero-flowers" viewBox="0 0 200 120" aria-hidden="true">
+    <g id="deco"></g>
+  </svg>
+</header>
+
+<main>
+  <div class="toolbar">
+    <input id="search" type="text" placeholder="Buscar notas..." aria-label="Buscar notas">
+    <button id="newAdmission" type="button">＋ Nova admissão</button>
+    <button id="newNote" class="secondary" type="button">＋ Nova nota</button>
+  </div>
+
+  <section class="panel score" id="score" aria-label="Desempenho do mês" hidden></section>
+
+  <div class="layout">
+    <section class="panel">
+      <h2>Suas notas</h2>
+      <div id="notes" class="note-list"></div>
+      <p class="foot">As notas ficam salvas no banco de dados Postgres.</p>
+    </section>
+    <section class="panel editor" id="editor" aria-live="polite">
+      <div class="empty">Crie uma admissão ou uma nota para começar.</div>
+    </section>
+  </div>
+</main>
+
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
