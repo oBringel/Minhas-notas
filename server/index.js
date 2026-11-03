@@ -286,10 +286,22 @@ app.use((err, _req, res, _next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-initDb()
-  .then(() => app.listen(PORT, () => console.log(`🌸 Notas rodando em http://localhost:${PORT}`)))
-  .catch((err) => {
-    console.error('Não foi possível conectar ao Postgres:', err.message);
-    console.error('Confira o DATABASE_URL no arquivo .env e se o banco está ligado.');
-    process.exit(1);
-  });
+
+// Suas rotas (app.get, app.post, etc) vêm aqui...
+
+async function ligarServidor() {
+  try {
+    // 1. Conecta no Neon e cria as tabelas do schema.sql se não existirem
+    await initDb();
+    console.log("Banco de dados sincronizado com sucesso!");
+
+    // 2. Só então liga o servidor
+    app.listen(PORT, () => {
+      console.log(`Servidor rodando na porta ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Erro ao iniciar o servidor:", error);
+  }
+}
+
+ligarServidor();
