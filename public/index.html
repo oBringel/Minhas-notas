@@ -5,10 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Minhas Notas</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg fill='%23ff7eb6'%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(72 20 20)'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(144 20 20)'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(216 20 20)'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(288 20 20)'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='5' fill='%23ffd966'/%3E%3C/svg%3E">
+
+<!-- Fontes: carregam sem travar a página (o texto aparece na hora com a fonte reserva) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" media="print" onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Quicksand:wght@500;600;700&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Quicksand:wght@500;600;700&display=swap"></noscript>
+
+<link rel="stylesheet" href="css/style.css?v=__V__">
+<link rel="stylesheet" href="css/pip.css?v=__V__">
+
+<!-- Baixa os scripts em paralelo, em vez de um depois do outro -->
+<link rel="modulepreload" href="js/api.js">
+<link rel="modulepreload" href="js/util.js">
+<link rel="modulepreload" href="js/flowers.js">
+<link rel="modulepreload" href="js/score.js">
+<link rel="modulepreload" href="js/store.js">
+<link rel="modulepreload" href="js/editor.js">
 </head>
 <body>
 <header class="hero">
@@ -26,24 +40,26 @@
     <input id="search" type="text" placeholder="Buscar notas..." aria-label="Buscar notas">
     <button id="newAdmission" type="button">＋ Nova admissão</button>
     <button id="newNote" class="secondary" type="button">＋ Nova nota</button>
+    <button id="openPip" class="secondary" type="button" aria-pressed="false"
+            title="Abre as notas numa janelinha que fica por cima dos outros programas">Janelinha flutuante</button>
   </div>
 
   <section class="panel score" id="score" aria-label="Desempenho do mês" hidden></section>
 
-  <div class="layout">
+  <div class="layout closed">
     <section class="panel">
       <h2>Suas notas</h2>
       <div id="notes" class="note-list"></div>
       <p class="foot">As notas ficam salvas no banco de dados Postgres.</p>
     </section>
-    <section class="panel editor" id="editor" aria-live="polite">
-      <div class="empty">Crie uma admissão ou uma nota para começar.</div>
-    </section>
+    <section class="panel editor" id="editor" aria-live="polite" hidden></section>
   </div>
 </main>
 
 <div id="toast" class="toast" role="status" hidden></div>
 
-<script type="module" src="js/app.js"></script>
+<!-- Notas e pontuação já vêm prontas do servidor (a tela abre mais rápido) -->
+<script id="boot" type="application/json">__BOOT__</script>
+<script type="module" src="js/app.js?v=__V__"></script>
 </body>
 </html>

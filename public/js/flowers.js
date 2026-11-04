@@ -1,4 +1,5 @@
-// Florzinhas que surgem quando um item do checklist é concluído
+// Florzinhas e efeitos. Funciona na página e também na janelinha flutuante:
+// cada efeito nasce no mesmo document do elemento que o disparou.
 
 const COLORS = [
   ['#ff8fc0', '#ffe27a'],
@@ -20,38 +21,42 @@ export function flowerSVG(petal, center) {
   </svg>`;
 }
 
-let layer;
-function getLayer() {
-  if (!layer) {
-    layer = document.createElement('div');
+const layers = new WeakMap();
+function getLayer(doc) {
+  let layer = layers.get(doc);
+  if (!layer || !layer.isConnected) {
+    layer = doc.createElement('div');
     layer.className = 'flower-layer';
-    document.body.append(layer);
+    doc.body.append(layer);
+    layers.set(doc, layer);
   }
   return layer;
 }
 
 const rand = (min, max) => Math.random() * (max - min) + min;
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const reduced = (doc) => doc.defaultView.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-function makeFlower(x, y, size) {
+function makeFlower(doc, x, y, size) {
   const [petal, center] = pick(COLORS);
-  const el = document.createElement('div');
+  const el = doc.createElement('div');
   el.className = 'flower';
   el.style.cssText = `left:${x}px;top:${y}px;width:${size}px;height:${size}px`;
   el.innerHTML = flowerSVG(petal, center);
-  getLayer().append(el);
+  getLayer(doc).append(el);
   return el;
 }
 
-/** Faz uma explosão de flores a partir do elemento (a caixinha marcada). */
+/** Explosão de flores a partir do elemento (a caixinha marcada). */
 export function bloom(origin) {
+  const doc = origin.ownerDocument;
   const r = origin.getBoundingClientRect();
   const x = r.left + r.width / 2;
   const y = r.top + r.height / 2;
 
   // Quem prefere menos movimento recebe só uma flor que surge e some
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    const el = makeFlower(x, y, 34);
+  if (reduced(doc)) {
+    const el = makeFlower(doc, x, y, 34);
     el.style.transform = 'translate(-50%, -50%)';
     el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 900, fill: 'forwards' })
       .onfinish = () => el.remove();
@@ -59,7 +64,7 @@ export function bloom(origin) {
   }
 
   // Flor grande que desabrocha na caixinha
-  const big = makeFlower(x, y, 54);
+  const big = makeFlower(doc, x, y, 54);
   big.animate(
     [
       { transform: 'translate(-50%,-50%) scale(0) rotate(-60deg)', opacity: 0 },
@@ -71,10 +76,8 @@ export function bloom(origin) {
   ).onfinish = () => big.remove();
 
   // Florzinhas voando para cima e caindo devagar
-  const count = 16;
-  for (let i = 0; i < count; i++) {
-    const size = rand(14, 32);
-    const el = makeFlower(x, y, size);
+  for (let i = 0; i < 16; i++) {
+    const el = makeFlower(doc, x, y, rand(14, 32));
     const dx = rand(-130, 130);
     const rise = rand(-170, -50);
     const fall = rise + rand(70, 140);
@@ -91,15 +94,13 @@ export function bloom(origin) {
   }
 }
 
-const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-/** Chuva de flores por toda a tela (usada nas comemorações de meta). */
-export function shower(count = 44) {
-  if (reducedMotion()) return;
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+/** Chuva de flores por toda a janela (comemoração de meta). */
+export function shower(doc = document, count = 44) {
+  if (reduced(doc)) return;
+  const w = doc.defaultView.innerWidth;
+  const h = doc.defaultView.innerHeight;
   for (let i = 0; i < count; i++) {
-    const el = makeFlower(rand(0, w), -50, rand(16, 36));
+    const el = makeFlower(doc, rand(0, w), -50, rand(16, 36));
     const sway = rand(-90, 90);
     const spin = rand(-360, 360);
     el.animate(
@@ -114,13 +115,14 @@ export function shower(count = 44) {
 
 /** Texto que sobe e some, por exemplo "+1", saindo de um elemento. */
 export function floatText(origin, text) {
+  const doc = origin.ownerDocument;
   const r = origin.getBoundingClientRect();
-  const el = document.createElement('div');
+  const el = doc.createElement('div');
   el.className = 'float-text';
   el.textContent = text;
   el.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top}px`;
-  getLayer().append(el);
-  const frames = reducedMotion()
+  getLayer(doc).append(el);
+  const frames = reduced(doc)
     ? [{ opacity: 1 }, { opacity: 0 }]
     : [
         { transform: 'translate(-50%,0)', opacity: 0 },

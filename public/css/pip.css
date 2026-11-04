@@ -1,0 +1,90 @@
+/* ====== Janelinha flutuante (fica por cima dos outros programas) ====== */
+body.pip {
+  display: block;
+  min-height: 0;
+  margin: 0;
+  font-size: 14px;
+  background-color: var(--bg);
+  background-image: none;
+}
+body.pip::before, body.pip::after { content: none; display: none; }
+
+.pip-app {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100vh;
+  padding: 12px;
+  overflow: hidden;
+}
+.pip-title h1 {
+  margin: 0;
+  font-family: var(--font-script);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #7a1545;
+}
+.pip-score p { margin: 0 0 5px; font-size: 13px; font-weight: 700; color: #8a2a58; }
+.pip-bar-track {
+  height: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--petal-light);
+  overflow: hidden;
+}
+.pip-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff9ec8, var(--accent));
+  transition: width .4s;
+}
+.pip-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.pip-actions button { flex: 1; padding: 8px 10px; font-size: 13px; }
+
+.pip-list {
+  display: grid;
+  gap: 7px;
+  align-content: start;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.pip-note {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+.pip-note.admissao { border-left: 5px solid var(--accent-soft); }
+.pip-note-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-weight: 700;
+}
+.pip-note-btn:hover { background: var(--petal-light); }
+.pip-note-btn strong, .pip-note-btn small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pip-note-btn small { margin-top: 1px; font-size: 12px; font-weight: 600; color: #82566e; }
+.pip-edit { flex-shrink: 0; margin-right: 8px; padding: 6px 12px; font-size: 12px; }
+
+.pip-toggle { flex-shrink: 0; width: 100%; padding: 9px 12px; font-size: 13px; }
+.pip-empty { margin: 8px 0; text-align: center; color: #82566e; }
+
+.pip-edit-wrap { height: 100vh; overflow-y: auto; }
+.pip-backbar { padding: 10px 14px 0; }
+body.pip .pip-editor { padding: 8px 14px 18px; min-height: 0; }
+body.pip .editor .note-title { font-size: 20px; }
+body.pip .editor-head input { font-size: 20px; }
+body.pip .score-points strong { font-size: 40px; }

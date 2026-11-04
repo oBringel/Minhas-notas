@@ -48,3 +48,6 @@ CREATE TABLE IF NOT EXISTS milestones (
   reached_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (month, pct)
 );
+
+-- Deixa a pontuação do mês rápida
+CREATE INDEX IF NOT EXISTS idx_tasks_done_at ON tasks(done_at) WHERE done;

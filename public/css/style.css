@@ -1,9 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Quicksand:wght@500;600;700&display=swap');
-
 :root {
   /* ===== Textos (troque aqui o que quiser) ===== */
   --texto-nav: "🌸  Cada tarefa concluída é uma flor a mais no seu jardim  🌸";
-  --texto-footer: "Feito com carinho para organizar o seu dia. | Áquila Bringel 💗";
+  --texto-footer: "Feito com carinho para organizar o seu dia 💗";
 
   /* ===== Fontes ===== */
   --font-script: "Dancing Script", "Brush Script MT", cursive;       /* título principal */
@@ -31,7 +29,6 @@ body {
   background-image:
     radial-gradient(circle at 12% 18%, #ffe3ef 0 70px, transparent 71px),
     radial-gradient(circle at 92% 70%, #ffe3ef 0 110px, transparent 111px);
-  background-attachment: fixed;
   color: var(--ink);
   font: 500 15px/1.55 var(--font-body);
   min-height: 100vh;
@@ -400,17 +397,17 @@ input[type="date"]:focus {
 /* ---------- Pontuação do mês ---------- */
 .score { margin-bottom: 18px; padding: 22px 24px 20px; }
 .score-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
-.score .score-top h2 { margin: 0 0 4px; font-size: 20px; }
-.score-stage { margin: 0; font-weight: 700; color: var(--accent); }
+.score .score-top h2 { margin: 0 0 4px; font-size: 26px; }
+.score-stage { margin: 0; font-size: 17px; font-weight: 700; color: var(--accent); }
 .score-points { text-align: right; }
 .score-points strong {
   display: inline-block;
   font-family: var(--font-title);
-  font-size: 44px;
+  font-size: 52px;
   line-height: 1;
   color: var(--accent);
 }
-.score-points span { display: block; font-size: 13px; color: var(--muted); font-weight: 600; }
+.score-points span { display: block; font-size: 15px; color: var(--muted); font-weight: 600; }
 .pop { animation: pop .45s ease-out; }
 @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
 
@@ -455,14 +452,14 @@ input[type="date"]:focus {
   font-family: var(--font-title);
   font-style: italic;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 19px;
   color: #8a2a58;
 }
 .score-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-button.small { padding: 7px 14px; font-size: 13px; }
+button.small { padding: 8px 16px; font-size: 14px; }
 
 .goal-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.goal-form label { font-weight: 700; font-size: 13px; color: #7a1545; }
+.goal-form label { font-weight: 700; font-size: 14px; color: #7a1545; }
 input[type="number"] {
   width: 110px;
   border: 1.5px solid var(--line);
@@ -498,7 +495,6 @@ input[type="number"]:focus {
   justify-content: center;
   padding: 20px;
   background: rgba(122, 21, 69, .35);
-  backdrop-filter: blur(3px);
 }
 .celebration-card {
   width: min(92vw, 380px);
@@ -529,4 +525,84 @@ input[type="number"]:focus {
 }
 @media (prefers-reduced-motion: reduce) {
   .pop, .celebration-card { animation: none; }
+}
+
+/* ---------- Tela "só as notas" (editor fechado) ---------- */
+.layout > * { min-width: 0; }
+.editor[hidden] { display: none; }
+.layout.closed { grid-template-columns: 1fr; }
+.layout.closed .note-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); }
+.note-list .empty { grid-column: 1 / -1; }
+
+.editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 2px dashed var(--line);
+}
+.editor-actions button { padding: 11px 30px; }
+
+/* ---------- Data no celular (não passar da tela) ---------- */
+.field { min-width: 0; }
+.fields { grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); }
+input[type="date"] {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 46px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+input[type="date"]::-webkit-date-and-time-value { text-align: left; min-height: 1.4em; }
+.benefit .benefit-event { min-width: min(200px, 100%); }
+
+/* ---------- Recompensas (texto digitado por ela) ---------- */
+.reward-list { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 8px; }
+.reward {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1.5px dashed var(--line);
+  border-radius: 16px;
+  background: #fff;
+  color: #82566e;
+}
+.reward b { min-width: 46px; font-family: var(--font-title); font-size: 17px; color: #82566e; }
+.reward span { flex: 1; font-size: 16px; overflow-wrap: anywhere; }
+.reward em {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}
+.reward.got { border-style: solid; border-color: var(--accent-soft); background: var(--petal-light); color: var(--ink); }
+.reward.got b { color: var(--accent); }
+.reward-hint { margin: 0 0 14px; color: #82566e; font-size: 14px; }
+
+.rewards-form { width: 100%; display: grid; gap: 10px; }
+.form-title { margin: 0; font-weight: 700; color: #7a1545; }
+.reward-field { display: flex; align-items: center; gap: 12px; }
+.reward-field span { min-width: 46px; font-family: var(--font-title); font-weight: 600; font-size: 17px; color: var(--accent); }
+.reward-field input { flex: 1; min-width: 0; }
+.form-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.celebration-reward {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--accent-soft);
+  border-radius: 18px;
+  background: var(--petal-light);
+}
+.celebration-reward small { display: block; margin-bottom: 2px; font-weight: 700; color: #82566e; }
+.celebration-reward strong { display: block; font-family: var(--font-title); font-size: 20px; color: #7a1545; overflow-wrap: anywhere; }
+
+@media (max-width: 700px) {
+  .score .score-top h2 { font-size: 22px; }
+  .score-points strong { font-size: 44px; }
 }

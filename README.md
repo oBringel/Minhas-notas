@@ -1,26 +1,6 @@
 # 🌸 Minhas Notas
 
-Notas e checklists com banco de dados **Postgres**. Ao marcar um item como concluído, florzinhas desabrocham na tela.
-
-## Estrutura
-
-```
-notas-checklist/
-├── db/schema.sql          # tabelas (notes e tasks)
-├── server/
-│   ├── db.js              # conexão com o Postgres
-│   └── index.js           # API (Express)
-├── public/
-│   ├── index.html
-│   ├── css/style.css      # visual rosa
-│   └── js/
-│       ├── api.js         # chamadas à API
-│       ├── app.js         # lógica da tela
-│       ├── score.js       # pontuação, metas e mensagens
-│       └── flowers.js     # animação das florzinhas
-├── docker-compose.yml     # Postgres pronto para usar
-└── .env.example           # configuração do banco
-```
+Notas e checklists com banco de dados **Postgres**, pontuação do mês, florzinhas e uma **janelinha flutuante** que fica por cima dos outros programas.
 
 ## Como rodar
 
@@ -30,7 +10,7 @@ notas-checklist/
 docker compose up -d
 ```
 
-Sem Docker? Crie o banco no seu Postgres: `createdb notas` e ajuste o `DATABASE_URL` no passo 2.
+Sem Docker? Crie o banco no seu Postgres (`createdb notas`) e ajuste o `DATABASE_URL` no passo 2.
 
 **2. Configure e instale:**
 
@@ -45,47 +25,79 @@ npm install
 npm start
 ```
 
-Abra http://localhost:3000. As tabelas são criadas sozinhas na primeira vez.
+Abra http://localhost:3000. As tabelas são criadas sozinhas.
 
-## Admissões
+**Atualizando de uma versão anterior:** substitua os arquivos, rode `npm install` de novo (entrou a compressão das páginas) e reinicie o servidor. As colunas novas entram no banco sozinhas e as notas continuam lá. Reiniciar o servidor também é o que faz o navegador pegar o CSS novo.
 
-O botão **＋ Nova admissão** cria uma nota já com o checklist pronto. Você só preenche nome, empresa, data de admissão e observações.
+## Estrutura
 
-Itens fixos (podem ser marcados, mas não removidos nem renomeados):
+```
+notas-checklist/
+├── db/schema.sql          # tabelas
+├── server/
+│   ├── db.js              # conexão com o Postgres
+│   └── index.js           # API (Express)
+├── public/
+│   ├── index.html
+│   ├── css/
+│   │   ├── style.css      # visual rosa
+│   │   └── pip.css        # visual da janelinha flutuante
+│   └── js/
+│       ├── app.js         # página principal (lista + abrir/fechar o editor)
+│       ├── editor.js      # editor de nota/admissão (usado na página e na janelinha)
+│       ├── store.js       # dados compartilhados e salvamento
+│       ├── pip.js         # janelinha flutuante
+│       ├── score.js       # pontuação, metas, recompensas e mensagens
+│       ├── flowers.js     # florzinhas
+│       ├── api.js         # chamadas ao servidor
+│       └── util.js        # funções pequenas
+├── docker-compose.yml
+└── .env.example
+```
 
-- Admissão preliminar
-- Envio p/ eSocial
-- Envio de documentação admissional
-- Doc. Pessoais na pasta
+## Notas e admissões
 
-**Tem VT?** e **Tem VR?**: ao escolher *Sim*, aparece uma linha para escrever qual evento cadastrar na admissão, e entra no checklist o item "Evento VT" (ou "Evento VR"). Ao escolher *Não*, a linha e o item somem.
+- **＋ Nova admissão** cria uma nota com o checklist pronto. Preencha nome, empresa, data de admissão e observações.
+- Itens fixos (podem ser marcados, mas não removidos): Admissão preliminar, Envio p/ eSocial, Envio de documentação admissional, Doc. Pessoais na pasta.
+- **Tem VT? / Tem VR?**: com *Sim*, aparece uma linha para escrever o evento a cadastrar na adm e entra o item "Evento VT" (ou "Evento VR") no checklist.
+- **Salvar** grava e fecha a coluna do editor, deixando só a lista de notas. Clique numa nota para abrir de novo. Enquanto digita, tudo também é salvo sozinho.
+- Para mudar os itens fixos ou os nomes dos eventos, edite `FIXED_TASKS` e `BENEFITS` no começo de `server/index.js`.
 
-Para mudar a lista de itens fixos ou os nomes dos eventos, edite `FIXED_TASKS` e `BENEFITS` no começo de `server/index.js`.
+## Janelinha flutuante
 
-Se você já rodou a versão anterior, é só reiniciar o servidor: as colunas novas são adicionadas ao banco automaticamente e suas notas continuam lá.
+O botão **Janelinha flutuante** abre uma janela pequena que fica por cima de outros programas (como o vídeo em miniatura do YouTube), para consultar e editar as notas sem sair do sistema que ela está usando.
+
+- Mostra as 3 notas mais recentes e o desempenho do mês. **Ver todas as notas** aumenta a janela, com busca pelo nome e rolagem.
+- **Editar** (ou clicar no nome) abre a janela maior com todos os dados: nome, empresa, data, observações, VT/VR e checklist (com as florzinhas e os pontos). **Salvar** volta para a lista.
+- Dá para criar **＋ Admissão** e **＋ Nota** direto da janelinha.
+- Funciona no **Chrome ou Edge no computador** (versão 116 ou mais nova), abrindo o site por `http://localhost:3000`. No Firefox, Safari e celular o navegador não oferece esse recurso.
+- A janelinha pertence à aba do site: pode minimizar a aba, mas não feche nem atualize a aba enquanto usa a janelinha.
 
 ## Pontuação do mês
 
-Cada item concluído vale **1 ponto**. O cartão no topo mostra o desempenho do mês, a barra de progresso e a etapa atual (Semente, Brotinho, Florzinha, Jardim florido, Buquê completo).
+Cada item concluído vale **1 ponto**. O cartão no topo mostra o desempenho do mês, a barra de progresso e a etapa atual.
 
-- **Meta do mês:** começa em 100 pontos e pode ser mudada no botão *Editar meta*.
-- **Marcos:** ao chegar em 30%, 50%, 75% e 100% da meta, aparece uma mensagem de comemoração com chuva de flores. Cada marco aparece só uma vez por mês.
-- **Desmarcar um item** tira o ponto. Excluir um item (ou uma nota) já concluído também.
-- **Virada do mês:** a pontuação recomeça do zero todo mês. O fuso usado fica em `APP_TZ` no `.env`.
-- Itens concluídos antes desta versão não entram na pontuação.
+- **Meta do mês:** começa em 100 pontos; mude em *Editar meta*.
+- **Recompensas:** em *Editar recompensas* ela escreve o que ganha ao chegar em 30%, 50%, 75% e 100%. Nada vem pré-preenchido.
+- **Marcos:** ao chegar em cada marco aparece uma mensagem de comemoração com chuva de flores (e a recompensa que ela escreveu). Cada marco aparece só uma vez por mês.
+- Desmarcar ou excluir um item concluído tira o ponto. A pontuação recomeça todo mês (fuso em `APP_TZ`, no `.env`).
+- Para mudar os textos das mensagens, edite o começo de `public/js/score.js`. Para mudar os marcos (%), edite `MILESTONES` em `server/index.js`.
 
-Para mudar os textos das mensagens, edite o começo de `public/js/score.js`. Para mudar os marcos (%), edite `MILESTONES` em `server/index.js`.
+## Velocidade
+
+- Fontes carregam sem travar a página (antes eram 5 famílias, agora 3).
+- Notas e pontuação já vêm dentro do HTML, então a tela abre pronta.
+- CSS fica em cache; JavaScript é só conferido (resposta 304, sem baixar de novo); páginas são comprimidas.
+- O servidor faz uma ida ao banco por ação (antes eram várias) e mantém a conexão aberta.
+- Use `127.0.0.1` no `DATABASE_URL`: no Windows, `localhost` pode causar uma espera a cada conexão.
 
 ## Configuração do banco
 
 Tudo fica no arquivo `.env`:
 
-| Variável       | Exemplo                                         |
-|----------------|-------------------------------------------------|
-| `DATABASE_URL` | `postgres://notas:notas123@localhost:5432/notas` |
-| `PGSSL`        | `true` para bancos na nuvem (Supabase, Neon…)   |
-| `PORT`         | `3000`                                          |
-
-## Suas notas antigas (localStorage)
-
-As notas salvas na versão anterior ficam no navegador e não vão para o banco automaticamente. Se quiser migrá-las, me avise que eu faço um botão de importar.
+| Variável       | Exemplo                                           |
+|----------------|---------------------------------------------------|
+| `DATABASE_URL` | `postgres://notas:notas123@127.0.0.1:5432/notas`  |
+| `PGSSL`        | `true` para bancos na nuvem (Supabase, Neon…)     |
+| `PORT`         | `3000`                                            |
+| `APP_TZ`       | `America/Fortaleza`                               |

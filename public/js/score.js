@@ -1,11 +1,9 @@
-// Pontuação do mês: cartão de desempenho, metas e mensagens de comemoração
+// Pontuação do mês: cartão de desempenho, metas, recompensas e mensagens de comemoração
 import { api } from './api.js';
 import { flowerSVG, shower } from './flowers.js';
+import { esc } from './util.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
-const esc = (text) =>
-  String(text).replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // =====================================================================
 //  MENSAGENS: edite os textos abaixo à vontade
@@ -13,11 +11,11 @@ const esc = (text) =>
 
 // Etapa mostrada no cartão, conforme a % da meta
 const STAGES = [
-  { from: 0,   emoji: '🌱', name: 'Semente',        msg: 'Seu mês está começando. Cada item concluído é uma sementinha plantada!' },
-  { from: 30,  emoji: '🌷', name: 'Brotinho',       msg: 'Passou dos 30%! Seu jardim já está brotando.' },
-  { from: 50,  emoji: '🌸', name: 'Florzinha',      msg: 'Metade da meta! Você está florescendo.' },
-  { from: 75,  emoji: '🌺', name: 'Jardim florido', msg: 'Falta pouquinho! Seu jardim está lindo.' },
-  { from: 100, emoji: '💐', name: 'Buquê completo', msg: 'Meta do mês batida! Você é incrível.' },
+  { from: 0,   name: 'Semente',        msg: 'Seu mês está começando. Cada item concluído é uma sementinha plantada!' },
+  { from: 30,  name: 'Brotinho',       msg: 'Passou dos 30%! Seu jardim já está brotando.' },
+  { from: 50,  name: 'Florzinha',      msg: 'Metade da meta! Você está florescendo.' },
+  { from: 75,  name: 'Jardim florido', msg: 'Falta pouquinho! Seu jardim está lindo.' },
+  { from: 100, name: 'Buquê completo', msg: 'Meta do mês batida! Você é incrível.' },
 ];
 
 // Mensagem que aparece uma vez, quando ela bate cada marco (30%, 50%, 75%, 100%)
@@ -31,20 +29,57 @@ const CELEBRATIONS = {
 // =====================================================================
 
 let data = null;
-let editing = false;
+let editing = null; // null | 'goal' | 'rewards'
 let previousPoints = null;
 let notify = () => {};
+const subscribers = new Set();
 
 export function initScore({ toast }) {
   notify = toast;
 }
 
-const monthName = (key) => {
+export const getScoreData = () => data;
+
+/** Avisa quando a pontuação muda (usado pela janelinha flutuante). */
+export function subscribeScore(fn) {
+  subscribers.add(fn);
+  return () => subscribers.delete(fn);
+}
+
+export const monthName = (key) => {
   const [year, month] = key.split('-').map(Number);
   return new Date(year, month - 1, 1).toLocaleDateString('pt-BR', { month: 'long' });
 };
 
-export function renderScore() {
+const rewardOf = (pct) => String((data.rewards || {})[pct] || '').trim();
+
+function goalFormHTML() {
+  return `
+    <form class="goal-form" id="goalForm">
+      <label for="goalInput">Meta do mês (em pontos)</label>
+      <input id="goalInput" type="number" min="1" max="9999" step="1" value="${data.goal}">
+      <button type="submit">Salvar</button>
+      <button type="button" class="secondary" id="cancelEdit">Cancelar</button>
+    </form>`;
+}
+
+function rewardsFormHTML() {
+  const fields = data.milestones.map((m) => `
+    <label class="reward-field"><span>${m}%</span>
+      <input type="text" maxlength="80" data-pct="${m}" value="${esc((data.rewards || {})[m] || '')}"
+             placeholder="Escreva aqui" aria-label="Recompensa ao chegar em ${m}%"></label>`).join('');
+  return `
+    <form class="rewards-form" id="rewardsForm">
+      <p class="form-title">Recompensa de cada marco</p>
+      ${fields}
+      <div class="form-actions">
+        <button type="submit">Salvar</button>
+        <button type="button" class="secondary" id="cancelEdit">Cancelar</button>
+      </div>
+    </form>`;
+}
+
+function renderScore() {
   const root = $('#score');
   if (!root) return;
   if (!data) { root.hidden = true; return; }
@@ -62,19 +97,28 @@ export function renderScore() {
       <i>${flowerSVG('#ff8fc0', '#ffe27a')}</i><small>${m}%</small></span>`;
   }).join('');
 
-  const goalControl = editing
-    ? `<form class="goal-form" id="goalForm">
-         <label for="goalInput">Meta do mês (em pontos)</label>
-         <input id="goalInput" type="number" min="1" max="9999" step="1" value="${data.goal}">
-         <button type="submit">Salvar</button>
-         <button type="button" class="secondary" id="cancelGoal">Cancelar</button>
-       </form>`
-    : '<button type="button" class="secondary small" id="editGoal">Editar meta</button>';
+  // Lista de recompensas (só as que ela escreveu)
+  const filled = data.milestones.filter((m) => rewardOf(m));
+  let rewardsBlock = '';
+  if (editing !== 'rewards') {
+    rewardsBlock = filled.length
+      ? `<ul class="reward-list" aria-label="Recompensas">${filled.map((m) => {
+          const got = data.reached.includes(m) || percent >= m;
+          return `<li class="reward${got ? ' got' : ''}"><b>${m}%</b><span>${esc(rewardOf(m))}</span>${got ? '<em>Conquistada</em>' : ''}</li>`;
+        }).join('')}</ul>`
+      : '<p class="reward-hint">Defina uma recompensa para cada marco em “Editar recompensas”.</p>';
+  }
+
+  let controls;
+  if (editing === 'goal') controls = goalFormHTML();
+  else if (editing === 'rewards') controls = rewardsFormHTML();
+  else controls = `<button type="button" class="secondary small" id="editGoal">Editar meta</button>
+                   <button type="button" class="secondary small" id="editRewards">Editar recompensas</button>`;
 
   root.innerHTML = `
     <div class="score-top">
       <div>
-        <h2>Seu desempenho em ${esc(mes)} ${stage.emoji}</h2>
+        <h2>Seu desempenho em ${esc(mes)}</h2>
         <p class="score-stage">${esc(stage.name)} · ${percent}% da meta</p>
       </div>
       <div class="score-points">
@@ -90,22 +134,35 @@ export function renderScore() {
       ${marks}
     </div>
     <p class="score-msg">${esc(stage.msg)}</p>
-    <div class="score-actions">${goalControl}</div>`;
+    ${rewardsBlock}
+    <div class="score-actions">${controls}</div>`;
 
-  // Editar meta
-  const editBtn = $('#editGoal', root);
-  if (editBtn) {
-    editBtn.onclick = () => {
-      editing = true;
-      renderScore();
-      const input = $('#goalInput');
-      if (input) { input.focus(); input.select(); }
-    };
-  }
-  const form = $('#goalForm', root);
-  if (form) {
-    $('#cancelGoal', root).onclick = () => { editing = false; renderScore(); };
-    form.onsubmit = async (ev) => {
+  bindControls(root);
+}
+
+function emit() {
+  renderScore();
+  subscribers.forEach((fn) => fn(data));
+}
+
+function startEditing(mode, focusSelector) {
+  editing = mode;
+  renderScore();
+  const input = $(focusSelector);
+  if (input) { input.focus(); input.select?.(); }
+}
+
+function bindControls(root) {
+  const editGoal = $('#editGoal', root);
+  if (editGoal) editGoal.onclick = () => startEditing('goal', '#goalInput');
+  const editRewards = $('#editRewards', root);
+  if (editRewards) editRewards.onclick = () => startEditing('rewards', '.reward-field input');
+  const cancel = $('#cancelEdit', root);
+  if (cancel) cancel.onclick = () => { editing = null; renderScore(); };
+
+  const goalForm = $('#goalForm', root);
+  if (goalForm) {
+    goalForm.onsubmit = async (ev) => {
       ev.preventDefault();
       const value = Number.parseInt($('#goalInput').value, 10);
       if (!(value >= 1 && value <= 9999)) {
@@ -114,19 +171,38 @@ export function renderScore() {
       }
       try {
         const score = await api.setGoal(value);
-        editing = false;
+        editing = null;
+        setScore(score);
+      } catch (err) { notify(err.message); }
+    };
+  }
+
+  const rewardsForm = $('#rewardsForm', root);
+  if (rewardsForm) {
+    rewardsForm.onsubmit = async (ev) => {
+      ev.preventDefault();
+      const rewards = {};
+      rewardsForm.querySelectorAll('input[data-pct]').forEach((input) => {
+        rewards[input.dataset.pct] = input.value.trim();
+      });
+      try {
+        const score = await api.setRewards(rewards);
+        editing = null;
         setScore(score);
       } catch (err) { notify(err.message); }
     };
   }
 }
 
-/** Atualiza o cartão com os dados do servidor. Com celebrate, mostra a mensagem do marco novo. */
-export function setScore(score, { celebrate = false } = {}) {
+/**
+ * Atualiza com os dados do servidor.
+ * Com celebrate, mostra a mensagem do marco novo na janela (doc) onde o clique aconteceu.
+ */
+export function setScore(score, { celebrate = false, doc = document } = {}) {
   data = score;
-  renderScore();
+  emit();
   if (celebrate && score.newlyReached?.length) {
-    showCelebration(Math.max(...score.newlyReached));
+    showCelebration(score.newlyReached, doc);
   }
 }
 
@@ -135,7 +211,7 @@ export function nudgeScore(delta) {
   if (!data) return;
   data.points = Math.max(0, data.points + delta);
   data.percent = Math.floor((data.points * 100) / data.goal);
-  renderScore();
+  emit();
 }
 
 /** Busca a pontuação atual (sem comemorar). */
@@ -144,15 +220,25 @@ export function loadScore() {
 }
 
 // ---------- Mensagem de comemoração ----------
-function showCelebration(pct) {
-  $('.celebration')?.remove();
+function showCelebration(reachedList, doc) {
+  doc.querySelector('.celebration')?.remove();
+  const pct = Math.max(...reachedList);
   const info = CELEBRATIONS[pct] || {
     emoji: '🌸', title: `Você chegou a ${pct}%!`, text: () => 'Continue assim, está lindo!',
   };
   const mes = monthName(data.month);
-  const previousFocus = document.activeElement;
+  const previousFocus = doc.activeElement;
 
-  const wrap = document.createElement('div');
+  // Recompensas dos marcos recém-conquistados (o texto é o que ela digitou)
+  const won = reachedList.filter((m) => rewardOf(m));
+  const rewardHTML = won.length
+    ? `<div class="celebration-reward">
+         <small>${won.length > 1 ? 'Suas recompensas' : 'Sua recompensa'}</small>
+         ${won.map((m) => `<strong>${won.length > 1 ? `${m}%: ` : ''}${esc(rewardOf(m))}</strong>`).join('')}
+       </div>`
+    : '';
+
+  const wrap = doc.createElement('div');
   wrap.className = 'celebration';
   wrap.innerHTML = `
     <div class="celebration-card" role="dialog" aria-modal="true" aria-labelledby="celTitle">
@@ -160,14 +246,15 @@ function showCelebration(pct) {
       <div class="celebration-pct" aria-hidden="true">${pct}%</div>
       <h3 id="celTitle">${esc(info.title)}</h3>
       <p>${esc(info.text(mes))}</p>
+      ${rewardHTML}
       <button type="button">Que bom! 💗</button>
     </div>`;
-  document.body.append(wrap);
+  doc.body.append(wrap);
 
-  const button = $('button', wrap);
+  const button = wrap.querySelector('button');
   const close = () => {
     wrap.remove();
-    document.removeEventListener('keydown', onKey);
+    doc.removeEventListener('keydown', onKey);
     previousFocus?.focus?.();
   };
   const onKey = (ev) => {
@@ -176,7 +263,7 @@ function showCelebration(pct) {
   };
   button.onclick = close;
   wrap.onclick = (ev) => { if (ev.target === wrap) close(); };
-  document.addEventListener('keydown', onKey);
+  doc.addEventListener('keydown', onKey);
   button.focus();
-  shower();
+  shower(doc);
 }

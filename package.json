@@ -1,13 +1,14 @@
 {
   "name": "notas-checklist",
-  "version": "2.0.0",
-  "description": "Notas e checklists com Postgres e florzinhas",
+  "version": "3.0.0",
+  "description": "Notas e checklists com Postgres, florzinhas e janelinha flutuante",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js"
   },
   "dependencies": {
+    "compression": "^1.7.4",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "pg": "^8.12.0"
