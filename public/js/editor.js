@@ -358,9 +358,10 @@ export function mountEditor(root, n, opts = {}) {
     if (del) {
       const what = isRescission(n) ? 'esta rescisão' : isAdmission(n) ? 'esta admissão' : 'esta nota';
       del.onclick = async () => {
-        if (!win.confirm(`Excluir ${what} e seu checklist?`)) return;
+        if (!win.confirm(`Mover ${what} para a lixeira? Dá para trazer de volta depois.`)) return;
         try {
           await removeNote(n);
+          toast('Nota movida para a lixeira.');
           onDeleted();
         } catch (err) { toast(err.message); }
       };

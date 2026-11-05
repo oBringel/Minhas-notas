@@ -16,6 +16,9 @@ async function request(method, url, data, { keepalive = false } = {}) {
 
 export const api = {
   listNotes: () => request('GET', '/api/notes'),
+  listTrash: () => request('GET', '/api/trash'),
+  restoreNote: (id) => request('POST', `/api/notes/${id}/restore`),
+  purgeNote: (id) => request('DELETE', `/api/notes/${id}/permanent`),
   createNote: (data = {}) => request('POST', '/api/notes', data),
   updateNote: (id, data) => request('PUT', `/api/notes/${id}`, data, { keepalive: true }),
   deleteNote: (id) => request('DELETE', `/api/notes/${id}`),

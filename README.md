@@ -88,6 +88,14 @@ Campos: Empresa, Colaborador, Tipo de rescisão, Último dia trabalhado, Dia lim
 
 Os itens de cada tipo ficam em `RESCISSION_TYPES` (e os fixos em `RESCISSION_TOP` e `RESCISSION_BOTTOM`), no começo de `server/index.js`.
 
+## Lixeira
+
+O botão **🗑 Lixeira** (na barra de cima) guarda as notas que foram excluídas.
+
+- **Excluir não apaga nada:** o servidor só marca a data (`notes.deleted_at`), a nota sai da lista e vai para a lixeira. Dá para trazer de volta com **Voltar**, com o checklist e as datas inteiros.
+- **Excluir para sempre** (`purged_at`) tira a nota da lixeira e ela não aparece mais na interface — mas o conteúdo continua guardado no banco, fora da tela. É de propósito: nada é perdido de verdade.
+- A pontuação dos itens já concluídos não muda quando uma nota vai para a lixeira.
+
 ## Janelinha flutuante
 
 O botão **Janelinha flutuante** abre uma janela pequena que fica por cima de outros programas (como o vídeo em miniatura do YouTube), para consultar e editar as notas sem sair do sistema que ela está usando.

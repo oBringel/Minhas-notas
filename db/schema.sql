@@ -62,3 +62,8 @@ ALTER TABLE notes ADD COLUMN IF NOT EXISTS preview_date    DATE;     -- data de 
 
 -- Ordem dos itens dentro de cada grupo do checklist
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
+
+-- Lixeira: nada é apagado de verdade. A nota sai da tela, mas continua guardada.
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;  -- foi para a lixeira
+ALTER TABLE notes ADD COLUMN IF NOT EXISTS purged_at  TIMESTAMPTZ;  -- "excluída para sempre" (sai da lixeira, conteúdo fica no banco)
+CREATE INDEX IF NOT EXISTS idx_notes_deleted ON notes(deleted_at) WHERE deleted_at IS NOT NULL;

@@ -5,7 +5,7 @@ import { bloom, floatEmoji, floatText } from './flowers.js';
 import { loadScore, nudgeScore, setScore } from './score.js';
 import { fmtDateTime, happyFace, isAdmission, isRescission } from './util.js';
 
-export const state = { notes: [], term: '' };
+export const state = { notes: [], trash: [], term: '' };
 export const findNote = (id) => state.notes.find((n) => n.id === id);
 
 // ---------- Avisos entre telas ----------
@@ -40,12 +40,35 @@ export async function createNote(kind, extra = {}) {
   return n;
 }
 
+// Excluir manda para a lixeira (o servidor só marca a data; nada é apagado).
 export async function removeNote(n) {
   clearPending(n.id);
   await api.deleteNote(n.id);
   state.notes = state.notes.filter((x) => x !== n);
   loadScore();
   notify('notes');
+}
+
+// ---------- Lixeira ----------
+export async function loadTrash() {
+  state.trash = await api.listTrash();
+  notify('trash');
+}
+
+export async function restoreNote(n) {
+  const back = await api.restoreNote(n.id);
+  state.trash = state.trash.filter((x) => x.id !== n.id);
+  if (back && !findNote(back.id)) state.notes.unshift(back);
+  notify('notes');
+  notify('trash');
+  return back;
+}
+
+// "Para sempre" aqui é só fora da interface: o conteúdo continua guardado no banco.
+export async function purgeNote(n) {
+  await api.purgeNote(n.id);
+  state.trash = state.trash.filter((x) => x.id !== n.id);
+  notify('trash');
 }
 
 // ---------- Salvamento ----------

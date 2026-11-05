@@ -93,7 +93,7 @@ const day = (value) => (/^\d{4}-\d{2}-\d{2}$/.test(value ?? '') ? value : null);
 
 // ---------- Consulta base das notas ----------
 const NOTE_SELECT = `
-  SELECT n.id, n.kind, n.title, n.body, n.updated_at,
+  SELECT n.id, n.kind, n.title, n.body, n.updated_at, n.deleted_at,
          n.employee_name, n.company,
          to_char(n.admission_date, 'YYYY-MM-DD') AS admission_date,
          n.has_vt, n.has_vr, n.event_vt, n.event_vr,
@@ -127,7 +127,18 @@ async function getNote(db, id) {
 }
 
 async function listNotes(db) {
-  const { rows } = await db.query(`${NOTE_SELECT} GROUP BY n.id ORDER BY n.updated_at DESC`);
+  const { rows } = await db.query(
+    `${NOTE_SELECT} WHERE n.deleted_at IS NULL GROUP BY n.id ORDER BY n.updated_at DESC`
+  );
+  return rows;
+}
+
+// Lixeira: o que saiu da tela e ainda não foi "excluído para sempre"
+async function listTrash(db) {
+  const { rows } = await db.query(
+    `${NOTE_SELECT} WHERE n.deleted_at IS NOT NULL AND n.purged_at IS NULL
+      GROUP BY n.id ORDER BY n.deleted_at DESC`
+  );
   return rows;
 }
 
@@ -195,6 +206,10 @@ async function getScore(db, { celebrate = false } = {}) {
 // ---------- Notas ----------
 app.get('/api/notes', wrap(async (_req, res) => {
   res.json(await listNotes(pool));
+}));
+
+app.get('/api/trash', wrap(async (_req, res) => {
+  res.json(await listTrash(pool));
 }));
 
 app.post('/api/notes', wrap(async (req, res) => {
@@ -273,8 +288,34 @@ app.put('/api/notes/:id', wrap(async (req, res) => {
   res.json(rows[0]);
 }));
 
+// Excluir = mandar para a lixeira. Em vez de apagar as linhas, só marca a data,
+// então dá para voltar atrás (e o conteúdo continua no banco).
 app.delete('/api/notes/:id', wrap(async (req, res) => {
-  await pool.query('DELETE FROM notes WHERE id = $1', [req.params.id]);
+  await pool.query(
+    'UPDATE notes SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL',
+    [req.params.id]
+  );
+  res.status(204).end();
+}));
+
+app.post('/api/notes/:id/restore', wrap(async (req, res) => {
+  const { rows } = await pool.query(
+    `UPDATE notes SET deleted_at = NULL, purged_at = NULL
+      WHERE id = $1 AND deleted_at IS NOT NULL RETURNING id`,
+    [req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Nota não encontrada na lixeira.' });
+  res.json(await getNote(pool, req.params.id));
+}));
+
+// "Excluir permanentemente" também não apaga: tira da lixeira e o conteúdo segue guardado
+// no banco, fora da interface.
+app.delete('/api/notes/:id/permanent', wrap(async (req, res) => {
+  await pool.query(
+    `UPDATE notes SET purged_at = now()
+      WHERE id = $1 AND deleted_at IS NOT NULL AND purged_at IS NULL`,
+    [req.params.id]
+  );
   res.status(204).end();
 }));
 

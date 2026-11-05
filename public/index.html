@@ -10,8 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'"
-      href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Quicksand:wght@500;600;700&display=swap">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Quicksand:wght@500;600;700&display=swap"></noscript>
+      href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&family=Quicksand:wght@500;600;700&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&family=Quicksand:wght@500;600;700&display=swap"></noscript>
 
 <link rel="stylesheet" href="css/style.css?v=__V__">
 <link rel="stylesheet" href="css/pip.css?v=__V__">
@@ -43,6 +43,8 @@
     <button id="newNote" class="secondary" type="button">＋ Nova nota</button>
     <button id="openPip" class="secondary" type="button" aria-pressed="false"
             title="Abre as notas numa janelinha que fica por cima dos outros programas">Janelinha flutuante</button>
+    <button id="openTrash" class="secondary" type="button" aria-pressed="false"
+            title="Notas excluídas: daqui dá para voltar atrás">🗑 Lixeira</button>
   </div>
 
   <section class="panel score" id="score" aria-label="Desempenho do mês" hidden></section>
@@ -55,6 +57,15 @@
     </section>
     <section class="panel editor" id="editor" aria-live="polite" hidden></section>
   </div>
+
+  <section class="panel trash" id="trash" aria-label="Lixeira" hidden>
+    <div class="trash-head">
+      <h2>🗑 Lixeira</h2>
+      <button id="closeTrash" class="secondary small" type="button">Fechar</button>
+    </div>
+    <p class="foot">Nada é apagado de verdade: a nota só sai da tela e pode voltar quando você quiser.</p>
+    <div id="trashList" class="trash-list"></div>
+  </section>
 </main>
 
 <div id="toast" class="toast" role="status" hidden></div>

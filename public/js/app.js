@@ -1,8 +1,12 @@
 import { flowerSVG } from './flowers.js';
 import { mountEditor } from './editor.js';
 import { initScore } from './score.js';
-import { createNote, findNote, flushPending, loadAll, state, subscribe } from './store.js';
-import { esc, isAdmission, isRescission, noteFace, noteMatches, noteSubtitle, showToast } from './util.js';
+import {
+  createNote, findNote, flushPending, loadAll, loadTrash, purgeNote, restoreNote, state, subscribe,
+} from './store.js';
+import {
+  esc, fmtDateTime, isAdmission, isRescission, noteFace, noteMatches, noteSubtitle, showToast,
+} from './util.js';
 
 const $ = (sel) => document.querySelector(sel);
 const toast = (message) => showToast(message);
@@ -67,6 +71,66 @@ $('#notes').onkeydown = (ev) => {
   }
 };
 
+// ---------- Lixeira ----------
+// Excluir não apaga: a nota vai para cá e pode voltar. "Para sempre" só a tira da lista.
+const trashBox = $('#trash');
+const trashButton = $('#openTrash');
+let trashOpen = false;
+
+function renderTrash() {
+  const root = $('#trashList');
+  if (!root) return;
+  if (!state.trash.length) {
+    root.innerHTML = '<p class="empty">A lixeira está vazia.</p>';
+    return;
+  }
+  root.innerHTML = state.trash.map((n) => `
+    <div class="trash-item" data-id="${n.id}">
+      <div class="trash-info">
+        <strong>${esc(n.title || 'Sem título')}</strong>
+        <small>${esc(noteSubtitle(n) || 'Sem itens')} · excluída em
+          ${n.deleted_at ? esc(fmtDateTime(n.deleted_at)) : '—'}</small>
+      </div>
+      <div class="trash-actions">
+        <button type="button" class="secondary small" data-action="restore">Voltar</button>
+        <button type="button" class="small danger" data-action="purge">Excluir para sempre</button>
+      </div>
+    </div>`).join('');
+}
+
+async function showTrash(open) {
+  trashOpen = open;
+  trashBox.hidden = !open;
+  trashButton.setAttribute('aria-pressed', String(open));
+  if (!open) return;
+  renderTrash();
+  try { await loadTrash(); } catch (err) { toast(err.message); }
+  if (!trashBox.hidden) trashBox.scrollIntoView({ block: 'nearest' });
+}
+
+trashButton.onclick = () => showTrash(!trashOpen);
+$('#closeTrash').onclick = () => showTrash(false);
+
+$('#trashList').onclick = async (ev) => {
+  const btn = ev.target.closest('button[data-action]');
+  if (!btn) return;
+  const item = btn.closest('.trash-item');
+  const n = state.trash.find((x) => x.id === item?.dataset.id);
+  if (!n) return;
+  try {
+    if (btn.dataset.action === 'restore') {
+      await restoreNote(n);
+      toast('Nota de volta! 💗');
+      return;
+    }
+    const ok = window.confirm(`Tirar "${n.title || 'Sem título'}" da lixeira para sempre?\n\n`
+      + 'Ela some da lista, mas o conteúdo continua guardado no banco de dados.');
+    if (!ok) return;
+    await purgeNote(n);
+    toast('Nota excluída da lixeira.');
+  } catch (err) { toast(err.message); }
+};
+
 // ---------- Editor: abre e fecha a coluna ----------
 function showEditor() {
   const n = findNote(selected);
@@ -122,6 +186,7 @@ async function create(kind) {
 
 // ---------- Avisos da store ----------
 subscribe((kind) => {
+  if (kind === 'trash') { renderTrash(); return; }
   if (kind === 'notes') {
     if (selected && !findNote(selected)) { closeEditor(); return; }
     const search = $('#search');
