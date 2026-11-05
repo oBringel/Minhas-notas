@@ -84,6 +84,7 @@ Campos: Empresa, Colaborador, Tipo de rescisão, Último dia trabalhado, Dia lim
 
 - Ao preencher o Último dia trabalhado, o Dia limite de pagamento já vem com +10 dias (prazo legal) e o de enviar a prévia com 5 dias antes disso. Os dois podem ser trocados à mão; quando o de pagamento muda, o de envio acompanha se ainda era automático.
 - Caindo no sábado ou domingo, a data vai para a sexta anterior. Feriados não entram na conta.
+- **Nada antes do último dia trabalhado:** não dá para pagar nem enviar a prévia antes de a pessoa sair. Se uma data anterior for digitada, o campo volta para o último dia trabalhado e avisa; um envio calculado antes disso é puxado para o último dia trabalhado, e datas erradas já salvas se corrigem ao abrir a nota.
 
 Os itens de cada tipo ficam em `RESCISSION_TYPES` (e os fixos em `RESCISSION_TOP` e `RESCISSION_BOTTOM`), no começo de `server/index.js`.
 

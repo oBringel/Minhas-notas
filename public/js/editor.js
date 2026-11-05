@@ -5,8 +5,8 @@ import {
   subscribe, toggleTask,
 } from './store.js';
 import {
-  RESCISSION_TYPES, admissionTitle, esc, fmtDateTime, happyFace, isAdmission, isRescission,
-  payDeadline, rescissionStatus, rescissionTitle, sendDeadline, showToast, validDay,
+  RESCISSION_TYPES, admissionTitle, beforeLastDay, esc, fmtDateTime, happyFace, isAdmission,
+  isRescission, payDeadline, rescissionStatus, rescissionTitle, sendDeadline, showToast, validDay,
 } from './util.js';
 
 const LOCK_ICON = `<span class="lock" title="Item fixo, não pode ser removido">
@@ -244,47 +244,83 @@ export function mountEditor(root, n, opts = {}) {
       $('#rType')?.focus();
     };
 
+    const lastDay = $('#lastDay');
+    const payInput = $('#payLimit');
+    const sendInput = $('#sendLimit');
+
+    // Pagamento e envio nunca podem ficar antes do último dia trabalhado: não dá para pagar
+    // antes de a pessoa sair. Se veio alguma data errada salva, o campo se acerta aqui.
+    const syncMins = () => {
+      const min = validDay(n.last_day) ? n.last_day : '';
+      payInput.min = min;
+      sendInput.min = min;
+    };
+    let fixed = false;
+    if (validDay(n.last_day)) {
+      if (beforeLastDay(n.pay_limit, n.last_day)) {
+        n.pay_limit = payDeadline(n.last_day);
+        fixed = true;
+      }
+      if (beforeLastDay(n.send_limit, n.last_day)) {
+        n.send_limit = validDay(n.pay_limit) ? sendDeadline(n.pay_limit, n.last_day) : null;
+        fixed = true;
+      }
+      payInput.value = n.pay_limit || '';
+      sendInput.value = n.send_limit || '';
+    }
+    syncMins();
+    if (fixed) changed();
+
     // Último dia trabalhado: preenche sozinho o limite de pagamento (+10 dias) e o limite
     // para enviar a prévia (-5 dias), antecipando quando cai no fim de semana — a não ser
     // que ela já tenha escrito outra data nesses campos.
-    const lastDay = $('#lastDay');
     lastDay.oninput = () => {
       const previous = validDay(n.last_day) ? n.last_day : null;
       n.last_day = lastDay.value || null;
       if (validDay(n.last_day)) {
         const autoPay = previous ? payDeadline(previous) : null;
-        const autoSend = previous ? sendDeadline(payDeadline(previous)) : null;
-        if (!n.pay_limit || n.pay_limit === autoPay) {
+        const autoSend = previous ? sendDeadline(payDeadline(previous), previous) : null;
+        if (!n.pay_limit || n.pay_limit === autoPay || beforeLastDay(n.pay_limit, n.last_day)) {
           n.pay_limit = payDeadline(n.last_day);
-          $('#payLimit').value = n.pay_limit;
+          payInput.value = n.pay_limit;
         }
-        if (!n.send_limit || n.send_limit === autoSend) {
-          n.send_limit = sendDeadline(n.pay_limit);
-          $('#sendLimit').value = n.send_limit;
+        if (!n.send_limit || n.send_limit === autoSend || beforeLastDay(n.send_limit, n.last_day)) {
+          n.send_limit = sendDeadline(n.pay_limit, n.last_day);
+          sendInput.value = n.send_limit;
         }
       }
+      syncMins();
       changed();
-    };
-
-    const date = (selector, field) => {
-      const input = $(selector);
-      if (!input) return;
-      input.oninput = () => { n[field] = input.value || null; changed(); };
     };
 
     // Mudou o limite de pagamento à mão? O limite de envio acompanha, se ainda era automático.
-    const payInput = $('#payLimit');
     payInput.oninput = () => {
-      const autoSend = validDay(n.pay_limit) ? sendDeadline(n.pay_limit) : null;
-      n.pay_limit = payInput.value || null;
-      if (validDay(n.pay_limit) && (!n.send_limit || n.send_limit === autoSend)) {
-        n.send_limit = sendDeadline(n.pay_limit);
-        $('#sendLimit').value = n.send_limit;
+      const autoSend = validDay(n.pay_limit) ? sendDeadline(n.pay_limit, n.last_day) : null;
+      let value = payInput.value || null;
+      if (beforeLastDay(value, n.last_day)) {
+        value = n.last_day; // nunca antes de sair
+        payInput.value = value;
+        toast('O pagamento não pode ser antes do último dia trabalhado.');
+      }
+      n.pay_limit = value;
+      if (validDay(n.pay_limit)
+        && (!n.send_limit || n.send_limit === autoSend || beforeLastDay(n.send_limit, n.last_day))) {
+        n.send_limit = sendDeadline(n.pay_limit, n.last_day);
+        sendInput.value = n.send_limit;
       }
       changed();
     };
 
-    date('#sendLimit', 'send_limit');
+    sendInput.oninput = () => {
+      let value = sendInput.value || null;
+      if (beforeLastDay(value, n.last_day)) {
+        value = n.last_day; // nunca antes de sair
+        sendInput.value = value;
+        toast('O envio não pode ser antes do último dia trabalhado.');
+      }
+      n.send_limit = value;
+      changed();
+    };
   }
 
   // ---------- Montagem ----------

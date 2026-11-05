@@ -61,13 +61,21 @@ export function todayStr() {
 /** Limite de pagamento: 10 dias após o último dia trabalhado; caindo no fim de semana, antecipa. */
 export const payDeadline = (lastDay) => previousBusinessDay(addDays(lastDay, 10));
 
-/** Prazo de envio: 5 dias antes do limite de pagamento; caindo no fim de semana, antecipa. */
-export const sendDeadline = (payLimit) => previousBusinessDay(addDays(payLimit, -5));
+/** Prazo de envio: 5 dias antes do limite de pagamento; caindo no fim de semana, antecipa.
+ *  Nunca fica antes do último dia trabalhado: não dá para enviar a prévia antes de a pessoa sair. */
+export const sendDeadline = (payLimit, lastDay) => {
+  const day = previousBusinessDay(addDays(payLimit, -5));
+  return validDay(lastDay) && day < lastDay ? lastDay : day;
+};
+
+/** Data anterior ao último dia trabalhado não vale (nem pagamento nem envio). */
+export const beforeLastDay = (day, lastDay) =>
+  validDay(day) && validDay(lastDay) && day < lastDay;
 
 export function rescissionDeadline(n) {
-  if (validDay(n.send_limit)) return n.send_limit;
-  if (!validDay(n.pay_limit)) return null;
-  return sendDeadline(n.pay_limit);
+  if (validDay(n.send_limit) && !beforeLastDay(n.send_limit, n.last_day)) return n.send_limit;
+  if (!validDay(n.pay_limit) || beforeLastDay(n.pay_limit, n.last_day)) return null;
+  return sendDeadline(n.pay_limit, n.last_day);
 }
 
 /**
@@ -101,9 +109,12 @@ const HAPPY = ['😃', '😄', '😁'];
 export const happyFace = (seed) => HAPPY[String(seed).charCodeAt(0) % HAPPY.length];
 
 // ---------- Textos e busca ----------
-const limitText = (n) =>
-  n.send_limit ? `Envio até ${fmtDay(n.send_limit)}`
-    : n.pay_limit ? `Pagto até ${fmtDay(n.pay_limit)}` : '';
+const limitText = (n) => {
+  const send = !beforeLastDay(n.send_limit, n.last_day) && n.send_limit;
+  const pay = !beforeLastDay(n.pay_limit, n.last_day) && n.pay_limit;
+  return send ? `Envio até ${fmtDay(send)}`
+    : pay ? `Pagto até ${fmtDay(pay)}` : '';
+};
 
 /** Linha de apoio embaixo do nome da nota. */
 export function noteSubtitle(n) {
