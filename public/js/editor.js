@@ -83,11 +83,13 @@ export function mountEditor(root, n, opts = {}) {
     </fieldset>`;
 
   const rescissionHeadHTML = () => `
-    <div class="editor-head">
-      <h2 class="note-title" id="heading">${esc(n.title)}</h2>
-      ${headButtons()}
+    <div class="editor-top">
+      <div class="editor-head">
+        <h2 class="note-title" id="heading">${esc(n.title)}</h2>
+        ${headButtons()}
+      </div>
+      <div class="meta" id="status">Atualizada em ${fmtDateTime(n.updated_at)}</div>
     </div>
-    <div class="meta" id="status">Atualizada em ${fmtDateTime(n.updated_at)}</div>
     <div class="status-banner" id="statusBanner" hidden></div>
     <div class="fields">
       <label class="field"><span>Empresa</span>
