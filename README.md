@@ -67,7 +67,7 @@ notas-checklist/
 
 **＋ Nova rescisão** cria uma nota com o checklist pronto. O título é sempre "Rescisão" + primeiro nome da empresa + primeiro nome do colaborador (ex.: *Rescisão Padaria Maria*).
 
-Campos: Empresa, Colaborador, Tipo de rescisão, Último dia trabalhado, Dia limite de pagamento, Dia limite para envio e **Envia prévia?** (com a data de enviar a prévia).
+Campos: Empresa, Colaborador, Tipo de rescisão, Último dia trabalhado, Dia limite de pagamento e Dia limite para enviar a prévia.
 
 **Checklist:** fixos de cima (data base, período de experiência, extrato, consignado, aviso) + itens do tipo escolhido + fixos de baixo (eSocial, arquivo bancário, prévia, Conecta). Ao trocar o tipo, só os itens do meio mudam, e o que já estava marcado e continua no novo tipo se mantém. Os itens fixos e os do tipo não podem ser removidos; itens extras ela pode adicionar (ficam antes dos fixos de baixo). O último item ("Enviado via Conecta") solta uma carinha feliz ao ser marcado. Justa causa ainda não existe, de propósito.
 
@@ -80,12 +80,10 @@ Campos: Empresa, Colaborador, Tipo de rescisão, Último dia trabalhado, Dia lim
 | 2 dias ou mais de atraso | vermelho | 😡 |
 | Concluída | verdinho pastel | 💅 |
 
-**Qual é o prazo que vale** (em `rescissionDeadline`, no arquivo `public/js/util.js`):
+**Qual é o prazo que vale** (em `rescissionDeadline`, no arquivo `public/js/util.js`): é **uma data só** — o Dia limite para enviar a prévia. Se ele ainda estiver vazio, a conta é feita na hora: limite de pagamento menos 5 dias.
 
-- **Com prévia:** a data de enviar a prévia (ao marcar "Envia prévia?", já vem preenchida com último dia + 3, e pode ser trocada).
-- **Sem prévia:** o Dia limite de pagamento menos 5 dias. Essa conta é interna e nunca aparece na tela. Se o resultado cair no sábado ou domingo, vale a sexta anterior.
-- Ao preencher o Último dia trabalhado, o Dia limite de pagamento já vem preenchido com +10 dias (prazo legal) e pode ser trocado.
-- Feriados não entram na conta, só sábado e domingo.
+- Ao preencher o Último dia trabalhado, o Dia limite de pagamento já vem com +10 dias (prazo legal) e o de enviar a prévia com 5 dias antes disso. Os dois podem ser trocados à mão; quando o de pagamento muda, o de envio acompanha se ainda era automático.
+- Caindo no sábado ou domingo, a data vai para a sexta anterior. Feriados não entram na conta.
 
 Os itens de cada tipo ficam em `RESCISSION_TYPES` (e os fixos em `RESCISSION_TOP` e `RESCISSION_BOTTOM`), no começo de `server/index.js`.
 

@@ -54,9 +54,9 @@ export function todayStr() {
 // =====================================================================
 //  PRAZO DA RESCISÃO (é isto que decide as carinhas)
 // =====================================================================
-// - Com prévia: vale a data de enviar a prévia.
-// - Sem prévia: vale o "Dia limite de pagamento" menos 5 dias. Essa conta é interna e
-//   nunca aparece na tela. Se cair no fim de semana, vai para o último dia útil.
+// Vale o "Dia limite para enviar a prévia" (a prévia tem que sair até ali). Se ainda não estiver
+// preenchido, a conta é feita na hora: limite de pagamento menos 5 dias. É uma data só, e é
+// ela que acende 🙂 / 🥶 / 😡 — mudar o pagamento só mexe nas carinhas porque o envio anda junto.
 // =====================================================================
 /** Limite de pagamento: 10 dias após o último dia trabalhado; caindo no fim de semana, antecipa. */
 export const payDeadline = (lastDay) => previousBusinessDay(addDays(lastDay, 10));
@@ -65,7 +65,6 @@ export const payDeadline = (lastDay) => previousBusinessDay(addDays(lastDay, 10)
 export const sendDeadline = (payLimit) => previousBusinessDay(addDays(payLimit, -5));
 
 export function rescissionDeadline(n) {
-  if (n.has_preview) return validDay(n.preview_date) ? n.preview_date : null;
   if (validDay(n.send_limit)) return n.send_limit;
   if (!validDay(n.pay_limit)) return null;
   return sendDeadline(n.pay_limit);

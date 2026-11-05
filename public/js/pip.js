@@ -10,11 +10,11 @@ import {
 
 // Tamanhos da janelinha em cada situação
 const SIZES = {
-  bar:     { w: 320, h: 112 },  // minimizada: só uma barrinha
-  compact: { w: 320, h: 320 },  // padrão: 3 notas
-  full:    { w: 380, h: 600 },  // todas as notas, com filtros e rolagem
-  edit:    { w: 450, h: 720 },  // editar os dados completos
-  quick:   { w: 340, h: 430 },  // criar rescisão rapidinho
+  bar:     { w: 300, h: 104 },  // minimizada: só uma barrinha
+  compact: { w: 300, h: 320 },  // padrão: as 3 notas mais recentes
+  full:    { w: 350, h: 520 },  // todas as notas, com filtros e rolagem
+  edit:    { w: 420, h: 640 },  // editar os dados completos
+  quick:   { w: 310, h: 400 },  // criar rescisão rapidinho
 };
 
 let win = null;

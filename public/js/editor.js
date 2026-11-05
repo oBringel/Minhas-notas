@@ -5,7 +5,7 @@ import {
   subscribe, toggleTask,
 } from './store.js';
 import {
-  RESCISSION_TYPES, addDays, admissionTitle, esc, fmtDateTime, happyFace, isAdmission, isRescission,
+  RESCISSION_TYPES, admissionTitle, esc, fmtDateTime, happyFace, isAdmission, isRescission,
   payDeadline, rescissionStatus, rescissionTitle, sendDeadline, showToast, validDay,
 } from './util.js';
 
@@ -109,16 +109,8 @@ export function mountEditor(root, n, opts = {}) {
         <input id="lastDay" type="date" value="${esc(n.last_day || '')}"></label>
       <label class="field"><span>Dia limite de pagamento</span>
         <input id="payLimit" type="date" value="${esc(n.pay_limit || '')}"></label>
-      <label class="field"><span>Dia limite para envio</span>
+      <label class="field"><span>Dia limite para enviar a prévia</span>
         <input id="sendLimit" type="date" value="${esc(n.send_limit || '')}"></label>
-    </div>
-    <div class="preview-box">
-      <label class="check"><input type="checkbox" id="hasPreview" ${n.has_preview ? 'checked' : ''}>
-        <span>Envia prévia?</span></label>
-      ${n.has_preview
-        ? `<label class="field"><span>Data de enviar a prévia</span>
-             <input id="previewDate" type="date" value="${esc(n.preview_date || '')}"></label>`
-        : ''}
     </div>`;
 
   const checklistHTML = () => `
@@ -252,8 +244,8 @@ export function mountEditor(root, n, opts = {}) {
       $('#rType')?.focus();
     };
 
-    // Último dia trabalhado: preenche sozinho o limite de pagamento (+10 dias, antecipando
-    // fim de semana), o limite de envio (-5 dias) e a data da prévia (+3 dias) — a não ser
+    // Último dia trabalhado: preenche sozinho o limite de pagamento (+10 dias) e o limite
+    // para enviar a prévia (-5 dias), antecipando quando cai no fim de semana — a não ser
     // que ela já tenha escrito outra data nesses campos.
     const lastDay = $('#lastDay');
     lastDay.oninput = () => {
@@ -270,14 +262,6 @@ export function mountEditor(root, n, opts = {}) {
           n.send_limit = sendDeadline(n.pay_limit);
           $('#sendLimit').value = n.send_limit;
         }
-        if (n.has_preview) {
-          const autoPreview = previous ? addDays(previous, 3) : null;
-          if (!n.preview_date || n.preview_date === autoPreview) {
-            n.preview_date = addDays(n.last_day, 3);
-            const preview = $('#previewDate');
-            if (preview) preview.value = n.preview_date;
-          }
-        }
       }
       changed();
     };
@@ -287,7 +271,6 @@ export function mountEditor(root, n, opts = {}) {
       if (!input) return;
       input.oninput = () => { n[field] = input.value || null; changed(); };
     };
-    date('#previewDate', 'preview_date');
 
     // Mudou o limite de pagamento à mão? O limite de envio acompanha, se ainda era automático.
     const payInput = $('#payLimit');
@@ -302,18 +285,6 @@ export function mountEditor(root, n, opts = {}) {
     };
 
     date('#sendLimit', 'send_limit');
-
-    // Envia prévia?
-    const check = $('#hasPreview');
-    check.onchange = () => {
-      n.has_preview = check.checked;
-      if (n.has_preview && !n.preview_date && validDay(n.last_day)) {
-        n.preview_date = addDays(n.last_day, 3);
-      }
-      changed();
-      render();
-      $('#previewDate')?.focus();
-    };
   }
 
   // ---------- Montagem ----------
