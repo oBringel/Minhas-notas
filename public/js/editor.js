@@ -6,7 +6,7 @@ import {
 } from './store.js';
 import {
   RESCISSION_TYPES, addDays, admissionTitle, esc, fmtDateTime, happyFace, isAdmission, isRescission,
-  rescissionStatus, rescissionTitle, showToast, validDay,
+  payDeadline, rescissionStatus, rescissionTitle, sendDeadline, showToast, validDay,
 } from './util.js';
 
 const LOCK_ICON = `<span class="lock" title="Item fixo, não pode ser removido">
@@ -82,12 +82,15 @@ export function mountEditor(root, n, opts = {}) {
       ${benefitHTML('vr', 'Tem VR?', n.has_vr, n.event_vr)}
     </fieldset>`;
 
+  // O bloco do topo só gruda na janelinha flutuante (regras em pip.css); na web rola normal.
   const rescissionHeadHTML = () => `
-    <div class="editor-head">
-      <h2 class="note-title" id="heading">${esc(n.title)}</h2>
-      ${headButtons()}
+    <div class="editor-top">
+      <div class="editor-head">
+        <h2 class="note-title" id="heading">${esc(n.title)}</h2>
+        ${headButtons()}
+      </div>
+      <div class="meta" id="status">Atualizada em ${fmtDateTime(n.updated_at)}</div>
     </div>
-    <div class="meta" id="status">Atualizada em ${fmtDateTime(n.updated_at)}</div>
     <div class="status-banner" id="statusBanner" hidden></div>
     <div class="fields">
       <label class="field"><span>Empresa</span>
@@ -249,17 +252,23 @@ export function mountEditor(root, n, opts = {}) {
       $('#rType')?.focus();
     };
 
-    // Último dia trabalhado: preenche sozinho o limite de pagamento (+10 dias)
-    // e a data da prévia (+3 dias), a não ser que ela já tenha escrito outra data.
+    // Último dia trabalhado: preenche sozinho o limite de pagamento (+10 dias, antecipando
+    // fim de semana), o limite de envio (-5 dias) e a data da prévia (+3 dias) — a não ser
+    // que ela já tenha escrito outra data nesses campos.
     const lastDay = $('#lastDay');
     lastDay.oninput = () => {
       const previous = validDay(n.last_day) ? n.last_day : null;
       n.last_day = lastDay.value || null;
       if (validDay(n.last_day)) {
-        const autoPay = previous ? addDays(previous, 10) : null;
+        const autoPay = previous ? payDeadline(previous) : null;
+        const autoSend = previous ? sendDeadline(payDeadline(previous)) : null;
         if (!n.pay_limit || n.pay_limit === autoPay) {
-          n.pay_limit = addDays(n.last_day, 10);
+          n.pay_limit = payDeadline(n.last_day);
           $('#payLimit').value = n.pay_limit;
+        }
+        if (!n.send_limit || n.send_limit === autoSend) {
+          n.send_limit = sendDeadline(n.pay_limit);
+          $('#sendLimit').value = n.send_limit;
         }
         if (n.has_preview) {
           const autoPreview = previous ? addDays(previous, 3) : null;
@@ -278,9 +287,21 @@ export function mountEditor(root, n, opts = {}) {
       if (!input) return;
       input.oninput = () => { n[field] = input.value || null; changed(); };
     };
-    date('#payLimit', 'pay_limit');
-    date('#sendLimit', 'send_limit');
     date('#previewDate', 'preview_date');
+
+    // Mudou o limite de pagamento à mão? O limite de envio acompanha, se ainda era automático.
+    const payInput = $('#payLimit');
+    payInput.oninput = () => {
+      const autoSend = validDay(n.pay_limit) ? sendDeadline(n.pay_limit) : null;
+      n.pay_limit = payInput.value || null;
+      if (validDay(n.pay_limit) && (!n.send_limit || n.send_limit === autoSend)) {
+        n.send_limit = sendDeadline(n.pay_limit);
+        $('#sendLimit').value = n.send_limit;
+      }
+      changed();
+    };
+
+    date('#sendLimit', 'send_limit');
 
     // Envia prévia?
     const check = $('#hasPreview');
