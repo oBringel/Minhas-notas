@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: notas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: notas
+      POSTGRES_PASSWORD: notas123
+      POSTGRES_DB: notas
+    ports:
+      - "5432:5432"
+    volumes:
+      - notas_dados:/var/lib/postgresql/data
+
+volumes:
+  notas_dados:
