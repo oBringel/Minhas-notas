@@ -1,15 +1,27 @@
+
+function initSidebar() {
+  const btn = document.querySelector('#menuToggle');
+  const shell = document.querySelector('#appShell');
+  if (!btn || !shell) return;
+  try { if (localStorage.getItem('pp-menu-collapsed') === '1') shell.classList.add('is-collapsed'); } catch {}
+  btn.addEventListener('click', () => {
+    const collapsed = shell.classList.toggle('is-collapsed');
+    try { localStorage.setItem('pp-menu-collapsed', collapsed ? '1' : '0'); } catch {}
+  });
+}
+
 import { fillIcons } from './icons.js';
 import { flowerSVG } from './flowers.js';
 import { mountEditor } from './editor.js';
-import { initScore } from './score.js';
+import { initScore } from './score.js?v=4';
 import {
   createNote, findNote, flushPending, loadAll, loadTrash, loadVacations, purgeNote, restoreNote,
   state, subscribe,
 } from './store.js';
 import {
   esc, fmtDateTime, isAdmission, isRescission, noteFace, noteMatches, noteSubtitle, showToast,
-} from './util.js';
-import { initDashboard, refreshDashboard } from './dashboard.js';
+} from './util.js?v=4';
+import { initDashboard, refreshDashboard, addPendencia } from './dashboard.js?v=4';
 import { initFiles, refreshFiles } from './files.js';
 import { initCalendar, refreshCalendar } from './calendar.js';
 import { initVacations, refreshVacations } from './vacations.js';
@@ -323,6 +335,23 @@ window.addEventListener('pagehide', () => { flushPending(); });
 decorateHero();
 initScore({ toast });
 initDashboard({ toast, navigate: go, openNote });
+  initSidebar();
+  // pendências (form do dashboard)
+  document.querySelector('#pendForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = document.querySelector('#pendText')?.value.trim();
+    if (!text) return;
+    await addPendencia({
+      text,
+      employee: document.querySelector('#pendEmployee')?.value.trim() || '',
+      dueDate: document.querySelector('#pendDue')?.value || '',
+      priority: document.querySelector('#pendPriority')?.value || 'media',
+      module: 'geral'
+    });
+    e.target.reset();
+    if (typeof toast === 'function') toast('Pendência adicionada.');
+  });
+
 initFiles({ toast });
 initCalendar({ toast });
 initVacations({ toast });
@@ -342,6 +371,9 @@ function readBoot() {
   }
   try { await loadVacations(); } catch { /* as férias são opcionais para o resto funcionar */ }
   go(location.hash.replace('#/', '') || 'dashboard');
+  if (!document.querySelector('.view:not([hidden])')) {
+    const d = document.querySelector('#view-dashboard'); if (d) d.hidden = false;
+  }
 })();
 
 // Desenha os ícones estáticos (Lucide) que vieram no HTML.

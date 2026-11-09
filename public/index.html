@@ -6,7 +6,6 @@
 <title>Rotinas do DP | P&P</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg fill='%23E9A6BF'%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(72 20 20)'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(144 20 20)'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(216 20 20)'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(288 20 20)'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='5' fill='%23722D4D'/%3E%3C/svg%3E">
 
-<!-- Fontes: carregam sem travar a página (o texto aparece na hora com a fonte reserva) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all'"
@@ -17,7 +16,6 @@
 <link rel="stylesheet" href="css/panel.css?v=__V__">
 <link rel="stylesheet" href="css/pip.css?v=__V__">
 
-<!-- Baixa os scripts em paralelo, em vez de um depois do outro -->
 <link rel="modulepreload" href="js/api.js">
 <link rel="modulepreload" href="js/util.js">
 <link rel="modulepreload" href="js/icons.js">
@@ -45,29 +43,76 @@
   </svg>
 </header>
 
-<div class="app-shell">
-  <!-- ---------- Menu ---------- -->
-  <nav class="menu" aria-label="Menu principal">
-    <a class="menu-link" href="#/dashboard" data-view="dashboard"><span class="menu-icon" data-icon="home"></span> Dashboard</a>
-    <a class="menu-link" href="#/notas" data-view="notas"><span class="menu-icon" data-icon="notebook-pen"></span> Notas</a>
-    <a class="menu-link" href="#/admissao" data-view="admissao"><span class="menu-icon" data-icon="users"></span> Admissão</a>
-    <a class="menu-link" href="#/rescisao" data-view="rescisao"><span class="menu-icon" data-icon="send"></span> Rescisão</a>
-    <a class="menu-link" href="#/ferias" data-view="ferias"><span class="menu-icon" data-icon="palmtree"></span> Férias</a>
-    <a class="menu-link" href="#/calculadora" data-view="calculadora"><span class="menu-icon" data-icon="calculator"></span> Calculadora</a>
-    <a class="menu-link" href="#/calendario" data-view="calendario"><span class="menu-icon" data-icon="calendar-days"></span> Calendário</a>
-    <a class="menu-link" href="#/arquivos" data-view="arquivos"><span class="menu-icon" data-icon="folder"></span> Arquivos</a>
-  </nav>
+<div class="app-shell" id="appShell">
+  <aside class="sidebar" id="sidebar">
+    <button class="menu-toggle" id="menuToggle" type="button" aria-label="Recolher menu" aria-expanded="true" title="Recolher menu">
+      <span data-icon="chevrons-left" data-size="17" class="toggle-icon"></span>
+    </button>
+    <nav class="menu" aria-label="Menu principal">
+      <a class="menu-link" href="#/dashboard" data-view="dashboard" title="Dashboard"><span class="menu-icon" data-icon="home"></span><span class="menu-label">Dashboard</span></a>
+      <a class="menu-link" href="#/notas" data-view="notas" title="Notas"><span class="menu-icon" data-icon="notebook-pen"></span><span class="menu-label">Notas</span></a>
+      <a class="menu-link" href="#/admissao" data-view="admissao" title="Admissão"><span class="menu-icon" data-icon="users"></span><span class="menu-label">Admissão</span></a>
+      <a class="menu-link" href="#/rescisao" data-view="rescisao" title="Rescisão"><span class="menu-icon" data-icon="send"></span><span class="menu-label">Rescisão</span></a>
+      <a class="menu-link" href="#/ferias" data-view="ferias" title="Férias"><span class="menu-icon" data-icon="palmtree"></span><span class="menu-label">Férias</span></a>
+      <a class="menu-link" href="#/calculadora" data-view="calculadora" title="Calculadora"><span class="menu-icon" data-icon="calculator"></span><span class="menu-label">Calculadora</span></a>
+      <a class="menu-link" href="#/calendario" data-view="calendario" title="Calendário"><span class="menu-icon" data-icon="calendar-days"></span><span class="menu-label">Calendário</span></a>
+      <a class="menu-link" href="#/arquivos" data-view="arquivos" title="Arquivos"><span class="menu-icon" data-icon="folder"></span><span class="menu-label">Arquivos</span></a>
+    </nav>
+  </aside>
 
   <main class="views">
     <!-- ================= DASHBOARD ================= -->
     <section class="view" id="view-dashboard" data-view="dashboard" hidden>
-      <section class="panel score" id="score" aria-label="Desempenho do mês" hidden></section>
 
-      <section class="panel">
+      <div class="kpi-strip" id="kpiStrip" aria-label="Indicadores gerais">
+        <button type="button" class="kpi" data-kpi="abertas">
+          <span class="kpi-icon kpi-open" data-icon="clock" data-size="18"></span>
+          <span class="kpi-body"><strong id="kpiAbertas">0</strong><small>Em aberto</small></span>
+        </button>
+        <button type="button" class="kpi" data-kpi="atrasadas">
+          <span class="kpi-icon kpi-late" data-icon="alert-triangle" data-size="18"></span>
+          <span class="kpi-body"><strong id="kpiAtrasadas">0</strong><small>Atrasadas</small></span>
+        </button>
+        <button type="button" class="kpi" data-kpi="hoje">
+          <span class="kpi-icon kpi-today" data-icon="sun" data-size="18"></span>
+          <span class="kpi-body"><strong id="kpiHoje">0</strong><small>Para hoje</small></span>
+        </button>
+        <button type="button" class="kpi" data-kpi="concluidas">
+          <span class="kpi-icon kpi-done" data-icon="circle-check" data-size="18"></span>
+          <span class="kpi-body"><strong id="kpiConcluidas">0</strong><small>Concluídas</small></span>
+        </button>
+      </div>
+
+      <section class="panel pend-panel">
         <div class="panel-head">
           <h2>Quadro de Pendências</h2>
-          <div class="head-actions">
-            <button id="toggleDonePend" class="ghost small" type="button">Mostrar concluídas</button>
+          <div class="head-actions pend-controls">
+            <div class="pend-filters">
+              <select id="pendFilterModule" aria-label="Filtrar por módulo">
+                <option value="">Módulo: todos</option>
+                <option value="admissao">Admissão</option>
+                <option value="rescisao">Rescisão</option>
+                <option value="ferias">Férias</option>
+                <option value="geral">Geral</option>
+              </select>
+              <select id="pendFilterPriority" aria-label="Filtrar por prioridade">
+                <option value="">Prioridade: todas</option>
+                <option value="alta">Alta</option>
+                <option value="media">Média</option>
+                <option value="baixa">Baixa</option>
+              </select>
+              <select id="pendFilterStatus" aria-label="Filtrar por situação">
+                <option value="abertas">Abertas</option>
+                <option value="atrasadas">Atrasadas</option>
+                <option value="hoje">Para hoje</option>
+                <option value="concluidas">Concluídas</option>
+                <option value="todas">Todas</option>
+              </select>
+            </div>
+            <div class="view-switch" role="group" aria-label="Modo de visualização">
+              <button id="pendViewCols" class="view-btn is-active" type="button" title="Colunas"><span data-icon="folder-tree" data-size="15"></span></button>
+              <button id="pendViewList" class="view-btn" type="button" title="Lista"><span data-icon="list-checks" data-size="15"></span></button>
+            </div>
             <button id="togglePendForm" class="small" type="button"><span data-icon="plus" data-size="16"></span> Nova pendência</button>
           </div>
         </div>
@@ -103,69 +148,66 @@
           </div>
         </form>
 
-        <div class="pend-board">
+                <div class="pend-board" id="pendBoard">
+          <div class="pend-col" data-bucket="atrasadas">
+            <h3>Atrasadas <span class="pill-count"></span></h3>
+            <div class="pend-list" data-bucket="atrasadas"></div>
+          </div>
           <div class="pend-col" data-bucket="hoje">
             <h3>Para hoje <span class="pill-count"></span></h3>
-            <div class="pend-list"></div>
+            <div class="pend-list" data-bucket="hoje"></div>
           </div>
           <div class="pend-col" data-bucket="semana">
             <h3>Para esta semana <span class="pill-count"></span></h3>
-            <div class="pend-list"></div>
+            <div class="pend-list" data-bucket="semana"></div>
           </div>
           <div class="pend-col" data-bucket="futuras">
             <h3>Pendências futuras <span class="pill-count"></span></h3>
-            <div class="pend-list"></div>
+            <div class="pend-list" data-bucket="futuras"></div>
           </div>
         </div>
-        <p class="foot">As atividades de Admissão, Rescisão e Férias aparecem aqui sozinhas — não precisa cadastrar duas vezes.</p>
+        <div class="pend-list-view" id="pendListView" hidden></div>
+
+      <section class="score panel" aria-label="Desempenho e gamificação">
+        <div id="scoreBox"><p class="score-loading">Carregando pontuação…</p></div>
       </section>
 
-      <div class="dash-grid">
-        <section class="panel">
-          <div class="panel-head"><h2>Quadro de Observações</h2>
-            <button id="clearBoard" class="ghost small" type="button">Limpar</button></div>
-          <textarea id="board" class="board-area" rows="8"
-                    placeholder="Anotações rápidas, lembretes do dia, combinados..."></textarea>
-          <p class="foot" id="boardStatus">Salva automaticamente enquanto você escreve.</p>
-        </section>
+      <section class="panel quick-access-panel">
+        <h2>Acesso rápido</h2>
+        <div class="module-cards">
+          <a class="module-card" href="#/admissao"><span class="mc-icon" data-icon="user-plus" data-size="18"></span><strong>Admissão</strong><small>Checklist e integração</small></a>
+          <a class="module-card" href="#/rescisao"><span class="mc-icon" data-icon="user-minus" data-size="18"></span><strong>Rescisão</strong><small>Prazos e documentos</small></a>
+          <a class="module-card" href="#/ferias"><span class="mc-icon" data-icon="umbrella" data-size="18"></span><strong>Férias</strong><small>Avisos e pagamento</small></a>
+          <a class="module-card" href="#/calendario"><span class="mc-icon" data-icon="calendar-days" data-size="18"></span><strong>Calendário</strong><small>Feriados e eventos</small></a>
+          <a class="module-card" href="#/arquivos"><span class="mc-icon" data-icon="folder-open" data-size="18"></span><strong>Arquivos</strong><small>Pastas e documentos</small></a>
+          <a class="module-card" href="#/calculadora"><span class="mc-icon" data-icon="calculator" data-size="18"></span><strong>Calculadora</strong><small>Cálculos de DP</small></a>
+        </div>
+      </section>
 
-        <section class="panel">
-          <h2>Checklist</h2>
-          <form id="checkForm" class="check-add">
-            <input id="checkInput" type="text" maxlength="500" placeholder="Novo item do checklist..." aria-label="Novo item do checklist">
-            <button type="submit" class="small">Adicionar</button>
+      <div class="dash-bottom">
+        <section class="panel" aria-label="Observações">
+          <h2>Observações</h2>
+          <div class="panel-inset">
+            <label class="field"><span>Quadro livre</span>
+              <textarea id="obsText" rows="4" placeholder="Anotações gerais, lembretes, pontos de atenção…"></textarea></label>
+          </div>
+        </section>
+        <section class="panel" aria-label="Checklist rápido">
+          <h2>Checklist rápido</h2>
+          <form class="inline-form" id="checkForm">
+            <input id="checkText" type="text" maxlength="200" placeholder="Novo item do checklist" />
+            <button class="small" type="submit"><span data-icon="plus" data-size="15"></span></button>
           </form>
-          <ul id="checkList" class="checklist"></ul>
-          <p class="foot" id="checkStatus"></p>
+          <div id="checkList" class="check-list"></div>
+        </section>
+        <section class="panel" aria-label="Próximos compromissos">
+          <div class="panel-head" style="margin-bottom:8px"><h2>Próximos compromissos</h2><a class="ghost small button-link" href="#/calendario"><span data-icon="calendar" data-size="14"></span> Calendário</a></div>
+          <div id="upcomingList" class="upcoming-list"><p class="pend-empty">Carregando…</p></div>
         </section>
       </div>
 
-      <section class="panel">
-        <h2>Módulos</h2>
-        <div class="module-cards">
-          <a class="module-card" href="#/admissao">
-            <span class="mc-icon" data-icon="users" data-size="22"></span><strong>Admissão</strong>
-            <small>Processos admissionais e benefícios.</small></a>
-          <a class="module-card" href="#/rescisao">
-            <span class="mc-icon" data-icon="send" data-size="22"></span><strong>Rescisão</strong>
-            <small>Prazos, checklist e envio da prévia.</small></a>
-          <a class="module-card" href="#/ferias">
-            <span class="mc-icon" data-icon="palmtree" data-size="22"></span><strong>Férias</strong>
-            <small>Quem sai, quando volta.</small></a>
-          <a class="module-card" href="#/notas">
-            <span class="mc-icon" data-icon="notebook-pen" data-size="22"></span><strong>Notas</strong>
-            <small>Anotações e lembretes soltos.</small></a>
-          <a class="module-card" href="#/calculadora">
-            <span class="mc-icon" data-icon="calculator" data-size="22"></span><strong>Calculadora</strong>
-            <small>Férias, 13º e horas extras.</small></a>
-          <a class="module-card" href="#/arquivos">
-            <span class="mc-icon" data-icon="folder" data-size="22"></span><strong>Arquivos</strong>
-            <small>Tabelas, PDFs e materiais de consulta.</small></a>
-        </div>
-      </section>
     </section>
 
-    <!-- ================= NOTAS ================= -->
     <section class="view" id="view-notas" data-view="notas" hidden>
       <div class="view-head">
         <h2>Notas</h2>
@@ -253,7 +295,6 @@
             <input id="calcFeriasDays" type="number" min="1" max="30" step="1" value="30"></label>
           <div class="calc-result" id="calcFeriasResult">—</div>
         </section>
-
         <section class="panel">
           <h2>13º proporcional</h2>
           <p class="foot">1/12 do salário por mês trabalhado no ano.</p>
@@ -263,7 +304,6 @@
             <input id="calc13Months" type="number" min="1" max="12" step="1" value="12"></label>
           <div class="calc-result" id="calc13Result">—</div>
         </section>
-
         <section class="panel">
           <h2>Horas extras</h2>
           <label class="field"><span>Salário mensal (R$)</span>
@@ -278,7 +318,6 @@
           </div>
           <div class="calc-result" id="calcHxResult">—</div>
         </section>
-
         <section class="panel">
           <h2>Porcentagem</h2>
           <p class="foot">Quanto é X% de um valor e quanto um valor representa de outro.</p>
@@ -318,24 +357,18 @@
       <div class="cal-layout">
         <section class="panel cal-panel">
           <div class="cal-head">
-            <button id="calPrev" class="ghost cal-nav" type="button" aria-label="Mês anterior">
-              <span data-icon="chevron-left" data-size="20"></span></button>
+            <button id="calPrev" class="ghost cal-nav" type="button" aria-label="Mês anterior"><span data-icon="chevron-left" data-size="20"></span></button>
             <div class="cal-title">
               <h2 id="calMonth"></h2>
               <div class="cal-year">
-                <button id="calPrevYear" class="ghost cal-year-btn" type="button" aria-label="Ano anterior">
-                  <span data-icon="chevrons-left" data-size="15"></span></button>
+                <button id="calPrevYear" class="ghost cal-year-btn" type="button" aria-label="Ano anterior"><span data-icon="chevrons-left" data-size="15"></span></button>
                 <select id="calYear" aria-label="Escolher ano"></select>
-                <button id="calNextYear" class="ghost cal-year-btn" type="button" aria-label="Próximo ano">
-                  <span data-icon="chevrons-right" data-size="15"></span></button>
+                <button id="calNextYear" class="ghost cal-year-btn" type="button" aria-label="Próximo ano"><span data-icon="chevrons-right" data-size="15"></span></button>
               </div>
             </div>
-            <button id="calNext" class="ghost cal-nav" type="button" aria-label="Próximo mês">
-              <span data-icon="chevron-right" data-size="20"></span></button>
+            <button id="calNext" class="ghost cal-nav" type="button" aria-label="Próximo mês"><span data-icon="chevron-right" data-size="20"></span></button>
           </div>
-
           <div class="cal-filters" id="calFilters" aria-label="Mostrar tipos de data"></div>
-
           <div id="calMonthView">
             <div class="cal-weekdays" aria-hidden="true">
               <span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span>
@@ -344,22 +377,17 @@
             <div class="cal-grid" id="calGrid"></div>
           </div>
           <div class="cal-yearview" id="calYearView" hidden></div>
-
           <div class="cal-legend">
             <span><i class="dot dot-week"></i>dias úteis</span>
             <span><i class="dot dot-sat"></i>sábado</span>
             <span><i class="dot dot-sun"></i>domingo</span>
             <span><i class="dot dot-holiday"></i>feriado</span>
             <span><i class="dot dot-event"></i>evento</span>
-            <button id="calToday" class="secondary small" type="button">
-              <span data-icon="sun" data-size="15"></span> Hoje</button>
+            <button id="calToday" class="secondary small" type="button"><span data-icon="sun" data-size="15"></span> Hoje</button>
           </div>
         </section>
-
         <aside class="panel cal-side">
-          <div class="panel-head">
-            <h2 id="calDayTitle">Escolha um dia</h2>
-          </div>
+          <div class="panel-head"><h2 id="calDayTitle">Escolha um dia</h2></div>
           <div id="calDayHolidays" class="cal-day-holidays"></div>
           <div id="calDayEvents" class="cal-day-events"></div>
           <form id="calEventForm" class="cal-event-form">
@@ -373,50 +401,38 @@
             <label class="field"><span>Descrição</span>
               <input id="calEventDesc" type="text" maxlength="2000" placeholder="Opcional"></label>
             <div class="form-row">
-              <label class="field field-sm"><span>Data</span>
-                <input id="calEventDay" type="date"></label>
+              <label class="field field-sm"><span>Data</span><input id="calEventDay" type="date"></label>
               <label class="field field-sm"><span>Categoria</span>
                 <select id="calEventCategory">
-                  <option value="prazo">Prazo</option>
-                  <option value="admissao">Admissão</option>
-                  <option value="ferias">Férias</option>
-                  <option value="documento">Documentação</option>
+                  <option value="prazo">Prazo</option><option value="admissao">Admissão</option>
+                  <option value="ferias">Férias</option><option value="documento">Documentação</option>
                   <option value="geral" selected>Geral</option>
                 </select></label>
               <label class="field field-sm"><span>Módulo</span>
                 <select id="calEventModule">
-                  <option value="geral">Geral</option>
-                  <option value="admissao">Admissão</option>
-                  <option value="rescisao">Rescisão</option>
-                  <option value="ferias">Férias</option>
+                  <option value="geral">Geral</option><option value="admissao">Admissão</option>
+                  <option value="rescisao">Rescisão</option><option value="ferias">Férias</option>
                 </select></label>
             </div>
             <div class="form-actions">
-              <button type="submit" id="calEventSubmit" class="small">
-                <span data-icon="plus" data-size="16"></span> Adicionar evento</button>
+              <button type="submit" id="calEventSubmit" class="small"><span data-icon="plus" data-size="16"></span> Adicionar evento</button>
             </div>
           </form>
         </aside>
       </div>
 
       <section class="panel cal-manage">
-        <div class="panel-head">
-          <h2>Datas personalizadas</h2>
-        </div>
+        <div class="panel-head"><h2>Datas personalizadas</h2></div>
         <p class="foot">Feriados municipais, aniversário da cidade, folgas internas e datas do DP. Podem repetir todo ano e ficam salvas no banco.</p>
         <form id="customDateForm" class="custom-date-form">
           <label class="field"><span>Nome da data</span>
             <input id="cdName" type="text" maxlength="200" required placeholder="Ex.: Aniversário da cidade"></label>
-          <label class="field field-sm"><span>Data</span>
-            <input id="cdDay" type="date" required></label>
+          <label class="field field-sm"><span>Data</span><input id="cdDay" type="date" required></label>
           <label class="field field-sm"><span>Tipo</span>
             <select id="cdKind">
-              <option value="municipal" selected>Municipal</option>
-              <option value="estadual">Estadual</option>
-              <option value="nacional">Nacional</option>
-              <option value="facultativo">Ponto facultativo</option>
-              <option value="comemorativo">Comemorativa</option>
-              <option value="personalizada">Personalizada</option>
+              <option value="municipal" selected>Municipal</option><option value="estadual">Estadual</option>
+              <option value="nacional">Nacional</option><option value="facultativo">Ponto facultativo</option>
+              <option value="comemorativo">Comemorativa</option><option value="personalizada">Personalizada</option>
             </select></label>
           <label class="cd-check"><input id="cdYearly" type="checkbox" checked> Repetir todo ano</label>
           <button type="submit" class="small"><span data-icon="calendar-plus" data-size="16"></span> Adicionar</button>
@@ -438,9 +454,7 @@
         </div>
         <div class="crumbs" id="crumbs"></div>
         <div class="files-layout">
-          <div class="folder-side">
-            <div id="folderTree" class="folder-tree"></div>
-          </div>
+          <div class="folder-side"><div id="folderTree" class="folder-tree"></div></div>
           <div class="files-main">
             <div class="files-tools">
               <input id="fileSearch" type="search" placeholder="Buscar arquivo..." aria-label="Buscar arquivo">
@@ -466,7 +480,6 @@
   </main>
 </div>
 
-<!-- Rodapé fixo: mensagem permanente -->
 <footer class="notice-bar" id="noticeBar">
   <span class="notice-dot" aria-hidden="true" data-icon="bell" data-size="15"></span>
   <span class="notice-text" id="noticeText"></span>
@@ -480,7 +493,6 @@
   </form>
 </footer>
 
-<!-- Editor: abre por cima, funciona em qualquer módulo -->
 <aside class="drawer" id="drawer" hidden aria-label="Editor da nota">
   <div class="drawer-back" id="drawerBack"></div>
   <section class="panel editor" id="editor"></section>
@@ -488,7 +500,6 @@
 
 <div id="toast" class="toast" role="status" hidden></div>
 
-<!-- Notas e pontuação já vêm prontas do servidor (a tela abre mais rápido) -->
 <script id="boot" type="application/json">__BOOT__</script>
 <script type="module" src="js/app.js?v=__V__"></script>
 </body>
