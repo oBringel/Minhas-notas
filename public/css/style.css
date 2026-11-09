@@ -1,7 +1,7 @@
 :root {
   /* ===== Textos (troque aqui o que quiser) ===== */
   --texto-nav: "🌸  Cada tarefa concluída é uma flor a mais no seu jardim  🌸";
-  --texto-footer: "Feito com carinho para organizar o seu dia 💗";
+  --texto-footer: "Feito com carinho para organizar o seu dia 💗 | Áquila Bringel";
 
   /* ===== Fontes ===== */
   --font-script: "Dancing Script", "Brush Script MT", cursive;       /* título principal */
@@ -79,11 +79,12 @@ body::after {
 }
 .hero h1 {
   margin: 0;
-  font-family: var(--font-script);
+  font-family: var(--font-title);
+  font-style: italic;
   font-weight: 700;
   font-size: 46px;
-  line-height: 1.1;
-  letter-spacing: 0;
+  line-height: 1.12;
+  letter-spacing: .2px;
   color: #7a1545;
 }
 .hero p { margin: 6px 0 0; color: #8a2a58; font-weight: 600; }
@@ -606,3 +607,113 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; min-height: 
   .score .score-top h2 { font-size: 22px; }
   .score-points strong { font-size: 44px; }
 }
+
+/* ---------- Rescisão ---------- */
+.note-pick.rescisao { border-left: 5px solid #c9a7e8; }
+.note-pick.active { box-shadow: 0 0 0 3px rgba(255, 126, 182, .35); }
+.note-pick.has-face { position: relative; padding-right: 50px; }
+.note-pick .face { position: absolute; top: 10px; right: 14px; font-size: 24px; line-height: 1; }
+
+/* Cores do prazo: azul (1 dia de atraso), vermelho (2 ou mais), verdinho pastel (concluída) */
+.note-pick.status-cold,  .pip-note.status-cold  { background: #e6f2ff; border-color: #9fcdf5; }
+.note-pick.status-angry, .pip-note.status-angry { background: #ffe5e5; border-color: #f0a3a3; }
+.note-pick.status-done,  .pip-note.status-done  { background: #e5f6e9; border-color: #a9d9b6; }
+
+.status-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  font-size: 17px;
+}
+.status-banner[hidden] { display: none; }
+.status-banner .status-emoji { font-size: 28px; line-height: 1; }
+.status-banner.status-ok    { background: var(--petal-light); color: #7a1545; }
+.status-banner.status-cold  { background: #e6f2ff; border-color: #9fcdf5; color: #1d4f7a; }
+.status-banner.status-angry { background: #ffe5e5; border-color: #f0a3a3; color: #8a1f1f; }
+.status-banner.status-done  { background: #e5f6e9; border-color: #a9d9b6; color: #2b6a3d; }
+
+select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  text-overflow: ellipsis;
+}
+select:focus {
+  outline: none;
+  border-color: var(--accent-soft);
+  box-shadow: 0 0 0 4px rgba(255, 126, 182, .22);
+}
+
+/* "Envia prévia?" */
+.preview-box {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 20px;
+  padding: 12px 16px 14px;
+  border: 1.5px dashed var(--line);
+  border-radius: 18px;
+}
+.preview-box .field { margin-bottom: 0; }
+.check { display: flex; align-items: center; gap: 12px; font-weight: 700; color: #7a1545; cursor: pointer; }
+.check input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 2px solid var(--accent-soft);
+  border-radius: 8px 8px 8px 3px;
+  background: #fff;
+  cursor: pointer;
+  display: grid;
+  place-content: center;
+  transition: background .15s;
+}
+.check input[type="checkbox"]::after {
+  content: "";
+  width: 11px;
+  height: 6px;
+  border-left: 2.5px solid #fff;
+  border-bottom: 2.5px solid #fff;
+  transform: rotate(-45deg) scale(0);
+  margin-top: -2px;
+  transition: transform .18s cubic-bezier(.3, 1.6, .5, 1);
+}
+.check input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+.check input[type="checkbox"]:checked::after { transform: rotate(-45deg) scale(1); }
+.check input[type="checkbox"]:focus-visible { outline: 3px solid rgba(255, 126, 182, .5); outline-offset: 2px; }
+
+/* Carinha feliz do último item */
+.final-face { font-size: 22px; line-height: 1; }
+.final-face[hidden] { display: none; }
+.float-emoji { position: absolute; font-size: 44px; line-height: 1; white-space: nowrap; }
+
+/* ---------- Lixeira ---------- */
+/* Excluir não apaga: a nota vem para cá e pode voltar com um clique. */
+.panel.trash { margin-top: 18px; }
+.trash-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.trash-head h2 { margin: 0; }
+.trash-list { display: grid; gap: 10px; margin-top: 14px; }
+.trash-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 16px; background: #fffafc;
+}
+.trash-info { display: grid; gap: 2px; min-width: 0; }
+.trash-info strong { font-size: 15px; color: var(--ink); }
+.trash-info small { font-size: 12px; color: var(--muted); }
+.trash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+button.danger { background: #fff0f4; color: #a4143f; border: 1.5px solid #f3b6cb; }
+button.danger:hover { background: #ffe1ea; }

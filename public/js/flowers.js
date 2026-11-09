@@ -132,3 +132,24 @@ export function floatText(origin, text) {
   el.animate(frames, { duration: 1100, easing: 'ease-out', fill: 'forwards' })
     .onfinish = () => el.remove();
 }
+
+/** Emoji grande que sobe e some (carinha feliz do último item da rescisão). */
+export function floatEmoji(origin, emoji) {
+  const doc = origin.ownerDocument;
+  const r = origin.getBoundingClientRect();
+  const el = doc.createElement('div');
+  el.className = 'float-emoji';
+  el.textContent = emoji;
+  el.style.cssText = `left:${r.left + r.width / 2}px;top:${r.top}px`;
+  getLayer(doc).append(el);
+  const frames = reduced(doc)
+    ? [{ opacity: 1 }, { opacity: 0 }]
+    : [
+        { transform: 'translate(-50%,0) scale(.4)', opacity: 0 },
+        { transform: 'translate(-50%,-30px) scale(1.4)', opacity: 1, offset: 0.3 },
+        { transform: 'translate(-50%,-56px) scale(1.1) rotate(-8deg)', opacity: 1, offset: 0.6 },
+        { transform: 'translate(-50%,-96px) scale(1)', opacity: 0 },
+      ];
+  el.animate(frames, { duration: 1700, easing: 'ease-out', fill: 'forwards' })
+    .onfinish = () => el.remove();
+}

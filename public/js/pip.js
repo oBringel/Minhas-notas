@@ -1,20 +1,27 @@
 // Janelinha flutuante: fica por cima dos outros programas (como o vídeo do YouTube
 // em miniatura). Usa a "Document Picture-in-Picture" do Chrome/Edge no computador.
 import { mountEditor } from './editor.js';
-import { flushPending, findNote, createNote, state, subscribe } from './store.js';
+import { createNote, findNote, flushPending, state, subscribe } from './store.js';
 import { getScoreData, monthName, subscribeScore } from './score.js';
-import { esc, isAdmission, noteMatches, noteSubtitle, showToast } from './util.js';
+import {
+  RESCISSION_TYPES, esc, filterNotes, isAdmission, isComplete, isRescission, noteFace, noteSubtitle,
+  rescissionStatus, showToast,
+} from './util.js';
 
-// Tamanhos da janelinha em cada tela
-const SIZE_LIST = { w: 340, h: 430 };      // 3 notas
-const SIZE_EXPANDED = { w: 360, h: 600 };  // todas as notas (com rolagem)
-const SIZE_EDIT = { w: 450, h: 720 };      // editar os dados completos
+// Tamanhos da janelinha em cada situação
+const SIZES = {
+  bar:     { w: 300, h: 104 },  // minimizada: só uma barrinha
+  compact: { w: 300, h: 320 },  // padrão: as 3 notas mais recentes
+  full:    { w: 350, h: 520 },  // todas as notas, com filtros e rolagem
+  edit:    { w: 420, h: 640 },  // editar os dados completos
+  quick:   { w: 310, h: 400 },  // criar rescisão rapidinho
+};
 
 let win = null;
-let view = 'list';      // 'list' | 'edit'
-let expanded = false;
-let term = '';
+let mode = 'compact';   // 'bar' | 'compact' | 'full'
+let view = 'list';      // 'list' | 'edit' | 'quick'
 let selectedId = null;
+let filters = { type: 'all', term: '', date: '', sort: 'recent' };
 let editor = null;
 let cleanups = [];
 let rowsQueued = false;
@@ -39,16 +46,17 @@ function copyStyles(w) {
 export async function togglePip({ onClose } = {}) {
   if (isOpen()) { win.close(); return; }
 
+  mode = 'compact';
+  view = 'list';
+  selectedId = null;
+  filters = { type: 'all', term: '', date: '', sort: 'recent' };
+
   const w = await window.documentPictureInPicture.requestWindow({
-    width: SIZE_LIST.w,
-    height: SIZE_LIST.h,
+    width: SIZES.compact.w,
+    height: SIZES.compact.h,
   });
 
   win = w;
-  view = 'list';
-  expanded = false;
-  term = '';
-  selectedId = null;
   closeCallback = onClose || (() => {});
 
   w.document.documentElement.lang = 'pt-BR';
@@ -57,7 +65,9 @@ export async function togglePip({ onClose } = {}) {
   w.document.body.className = 'pip';
   w.document.body.innerHTML = '<div id="pipRoot"></div>';
 
-  cleanups = [subscribe(onStoreChange), subscribeScore(updateScoreLine)];
+  // As carinhas dependem do dia de hoje: reconfere de tempos em tempos
+  const clock = w.setInterval(queueRows, 10 * 60 * 1000);
+  cleanups = [subscribe(onStoreChange), subscribeScore(updateScoreLine), () => w.clearInterval(clock)];
   w.addEventListener('pagehide', teardown, { once: true });
   render();
 }
@@ -65,7 +75,7 @@ export async function togglePip({ onClose } = {}) {
 function teardown() {
   editor?.destroy();
   editor = null;
-  cleanups.forEach((fn) => fn());
+  cleanups.forEach((fn) => { try { fn(); } catch { /* janela já fechou */ } });
   cleanups = [];
   win = null;
   flushPending(); // se ela estava digitando, grava agora
@@ -75,7 +85,7 @@ function teardown() {
 function onStoreChange(kind) {
   if (!isOpen()) return;
   if (view === 'list') queueRows();
-  else if (kind === 'notes' && !findNote(selectedId)) goList();
+  else if (view === 'edit' && kind === 'notes' && !findNote(selectedId)) goList();
 }
 
 // ---------- Telas ----------
@@ -84,85 +94,162 @@ function render() {
   const root = win.document.getElementById('pipRoot');
   editor?.destroy();
   editor = null;
-  if (view === 'edit') renderEdit(root); else renderList(root);
+  if (view === 'edit') renderEdit(root);
+  else if (view === 'quick') renderQuick(root);
+  else renderList(root);
+}
+
+function setMode(next) {
+  mode = next;
+  render();
+  resize(SIZES[mode]);
 }
 
 function renderList(root) {
+  const full = mode === 'full';
   root.innerHTML = `
-    <div class="pip-app">
-      <div class="pip-title"><h1>Minhas Notas</h1></div>
-      <div class="pip-score" id="pipScore"></div>
-      <div class="pip-actions">
-        <button type="button" id="pipNewAdm">＋ Admissão</button>
-        <button type="button" class="secondary" id="pipNewNote">＋ Nota</button>
+    <div class="pip-app pip-${mode}">
+      <div class="pip-head">
+        <h1>Minhas Notas</h1>
+        <div class="pip-win">
+          ${mode !== 'bar' ? '<button type="button" class="secondary small" id="pipLess" title="Deixar a janelinha menor">Minimizar</button>' : ''}
+          ${mode !== 'full' ? '<button type="button" class="secondary small" id="pipMore" title="Ver mais informações">Expandir</button>' : ''}
+        </div>
       </div>
-      ${expanded ? `<input id="pipSearch" type="text" placeholder="Buscar pelo nome..."
-                          aria-label="Buscar notas pelo nome" autocomplete="off" value="${esc(term)}">` : ''}
-      <div class="pip-list" id="pipList"></div>
-      <button type="button" class="secondary pip-toggle" id="pipToggle" hidden></button>
+      ${mode === 'bar'
+        ? '<p class="pip-summary" id="pipSummary"></p>'
+        : '<div class="pip-score" id="pipScore"></div>'}
+      ${full ? `
+        <div class="pip-filters">
+          <div class="pip-chips" role="group" aria-label="Tipo de nota">
+            <button type="button" class="chip" data-type="all">Todas</button>
+            <button type="button" class="chip" data-type="admissao">Admissões</button>
+            <button type="button" class="chip" data-type="rescisao">Rescisões</button>
+          </div>
+          <input id="pipSearch" type="text" placeholder="Buscar pelo nome..." aria-label="Buscar notas pelo nome"
+                 autocomplete="off" value="${esc(filters.term)}">
+          <div class="pip-datebar">
+            <input id="pipDate" type="date" aria-label="Filtrar por data" value="${esc(filters.date)}">
+            <button type="button" class="secondary small" id="pipClearDate" ${filters.date ? '' : 'hidden'}>Limpar</button>
+            <select id="pipSort" aria-label="Ordenar">
+              <option value="recent">Mais recentes</option>
+              <option value="date">Por data</option>
+            </select>
+          </div>
+        </div>` : ''}
+      ${mode !== 'bar' ? '<div class="pip-list" id="pipList"></div>' : ''}
+      ${mode === 'compact' ? '<p class="pip-moreinfo" id="pipMoreInfo" hidden></p>' : ''}
+      ${mode !== 'bar' ? `
+        <div class="pip-actions">
+          <button type="button" id="pipNewAdm">＋ Admissão</button>
+          <button type="button" id="pipNewResc">＋ Rescisão</button>
+        </div>` : ''}
     </div>`;
 
   const $ = (sel) => root.querySelector(sel);
 
-  $('#pipNewAdm').onclick = () => create('admissao');
-  $('#pipNewNote').onclick = () => create('nota');
+  $('#pipLess')?.addEventListener('click', () => setMode(mode === 'full' ? 'compact' : 'bar'));
+  $('#pipMore')?.addEventListener('click', () => setMode(mode === 'bar' ? 'compact' : 'full'));
+  $('#pipNewAdm')?.addEventListener('click', () => createAdmission());
+  $('#pipNewResc')?.addEventListener('click', () => { view = 'quick'; render(); resize(SIZES.quick); });
 
-  $('#pipToggle').onclick = () => {
-    expanded = !expanded;
-    term = '';
-    render();
-    resize(expanded ? SIZE_EXPANDED : SIZE_LIST);
-  };
+  if (full) {
+    const syncChips = () => root.querySelectorAll('.chip').forEach((chip) =>
+      chip.setAttribute('aria-pressed', String(chip.dataset.type === filters.type)));
+    root.querySelectorAll('.chip').forEach((chip) => {
+      chip.onclick = () => { filters.type = chip.dataset.type; syncChips(); renderRows(); };
+    });
+    syncChips();
 
-  const search = $('#pipSearch');
-  if (search) {
-    search.oninput = () => { term = search.value; renderRows(); };
+    const search = $('#pipSearch');
+    search.oninput = () => { filters.term = search.value; renderRows(); };
+
+    const date = $('#pipDate');
+    const clear = $('#pipClearDate');
+    date.oninput = () => { filters.date = date.value; clear.hidden = !filters.date; renderRows(); };
+    clear.onclick = () => { filters.date = ''; date.value = ''; clear.hidden = true; renderRows(); };
+
+    const sort = $('#pipSort');
+    sort.value = filters.sort;
+    sort.onchange = () => { filters.sort = sort.value; renderRows(); };
   }
 
   // Um único ouvinte para todas as linhas (mais leve que um por nota)
-  $('#pipList').onclick = (ev) => {
-    const btn = ev.target.closest('[data-open]');
-    if (btn) openEdit(btn.dataset.open);
-  };
+  const list = $('#pipList');
+  if (list) {
+    list.onclick = (ev) => {
+      const btn = ev.target.closest('[data-open]');
+      if (btn) openEdit(btn.dataset.open);
+    };
+  }
 
   renderRows();
   updateScoreLine(getScoreData());
 }
 
+// ---------- Linhas da lista ----------
+function rowHTML(n, full) {
+  const face = noteFace(n);
+  const classes = [
+    'pip-note',
+    isAdmission(n) && 'admissao',
+    isRescission(n) && 'rescisao',
+    face && `status-${face.key}`,
+  ].filter(Boolean).join(' ');
+  const faceHTML = face
+    ? `<span class="pip-face" title="${esc(face.label)}" aria-label="${esc(face.label)}">${face.emoji}</span>` : '';
+
+  return `
+    <div class="${classes}">
+      <button type="button" class="pip-note-btn" data-open="${n.id}">
+        <strong>${esc(n.title || 'Sem título')}</strong>
+        ${full ? `<small>${esc(noteSubtitle(n))}</small>` : ''}
+      </button>
+      ${faceHTML}
+      ${full ? `<button type="button" class="secondary pip-edit" data-open="${n.id}"
+                        aria-label="Editar ${esc(n.title || 'nota')}">Editar</button>` : ''}
+    </div>`;
+}
+
+// Resumo da barrinha minimizada
+function summaryText() {
+  const tracked = state.notes.filter((n) => isAdmission(n) || isRescission(n));
+  const open = tracked.filter((n) => !isComplete(n)).length;
+  const late = state.notes.filter(isRescission).map((n) => rescissionStatus(n).key);
+  const cold = late.filter((k) => k === 'cold').length;
+  const angry = late.filter((k) => k === 'angry').length;
+  const parts = [open ? `${open} pendente${open === 1 ? '' : 's'}` : 'Tudo em dia 💅'];
+  if (cold) parts.push(`🥶 ${cold}`);
+  if (angry) parts.push(`😡 ${angry}`);
+  return parts.join(' · ');
+}
+
 function renderRows() {
   if (!isOpen() || view !== 'list') return;
   const doc = win.document;
+
+  const summary = doc.getElementById('pipSummary');
+  if (summary) summary.textContent = summaryText();
+
   const list = doc.getElementById('pipList');
-  const toggle = doc.getElementById('pipToggle');
   if (!list) return;
+  const full = mode === 'full';
+  const shown = full ? filterNotes(state.notes, filters) : state.notes.slice(0, 3);
 
-  const filtered = expanded ? state.notes.filter((n) => noteMatches(n, term.trim().toLowerCase())) : state.notes;
-  const shown = expanded ? filtered : state.notes.slice(0, 3);
+  list.innerHTML = shown.length
+    ? shown.map((n) => rowHTML(n, full)).join('')
+    : `<p class="pip-empty">${state.notes.length ? 'Nenhuma nota encontrada.' : 'Nenhuma nota ainda. Crie uma admissão ou rescisão!'}</p>`;
 
-  if (!shown.length) {
-    list.innerHTML = `<p class="pip-empty">${
-      state.notes.length ? 'Nenhuma nota encontrada.' : 'Nenhuma nota ainda. Crie uma admissão!'}</p>`;
-  } else {
-    list.innerHTML = shown.map((n) => `
-      <div class="pip-note${isAdmission(n) ? ' admissao' : ''}">
-        <button type="button" class="pip-note-btn" data-open="${n.id}">
-          <strong>${esc(n.title || 'Sem título')}</strong>
-          <small>${esc(noteSubtitle(n))}</small>
-        </button>
-        <button type="button" class="secondary pip-edit" data-open="${n.id}"
-                aria-label="Editar ${esc(n.title || 'nota')}">Editar</button>
-      </div>`).join('');
-  }
-
-  // Botão de expandir/recolher só aparece quando tem mais de 3 notas
-  if (toggle) {
-    toggle.hidden = state.notes.length <= 3;
-    toggle.textContent = expanded ? 'Recolher' : `Ver todas as notas (${state.notes.length})`;
+  const more = doc.getElementById('pipMoreInfo');
+  if (more) {
+    const extra = state.notes.length - 3;
+    more.hidden = extra <= 0;
+    more.textContent = `+ ${extra} ${extra === 1 ? 'nota' : 'notas'}. Use “Expandir” para ver todas.`;
   }
 }
 
 function queueRows() {
-  if (rowsQueued) return;
+  if (rowsQueued || !isOpen()) return;
   rowsQueued = true;
   win.requestAnimationFrame(() => { rowsQueued = false; renderRows(); });
 }
@@ -177,6 +264,7 @@ function updateScoreLine(score) {
     <div class="pip-bar-track"><div class="pip-bar-fill" style="width:${Math.min(100, score.percent)}%"></div></div>`;
 }
 
+// ---------- Editar (janela grande) ----------
 function renderEdit(root) {
   const n = findNote(selectedId);
   if (!n) { goList(); return; }
@@ -195,21 +283,63 @@ function openEdit(id) {
   view = 'edit';
   selectedId = id;
   render();
-  resize(SIZE_EDIT);
+  resize(SIZES.edit);
 }
 
 function goList() {
   view = 'list';
   selectedId = null;
   render();
-  resize(expanded ? SIZE_EXPANDED : SIZE_LIST);
+  resize(SIZES[mode]);
 }
 
-async function create(kind) {
+// Nova admissão: abre direto a janela grande para preencher
+async function createAdmission() {
   try {
-    const n = await createNote(kind);
+    const n = await createNote('admissao');
     openEdit(n.id);
   } catch (err) {
     showToast(err.message, win.document);
   }
+}
+
+// ---------- Nova rescisão (rapidinho, sem abrir a janela grande) ----------
+function renderQuick(root) {
+  root.innerHTML = `
+    <div class="pip-app pip-quick">
+      <div class="pip-head"><h1>Nova rescisão</h1></div>
+      <form class="pip-quick-form" id="pipQuickForm">
+        <label class="field"><span>Empresa</span>
+          <input id="qCompany" type="text" autocomplete="off"></label>
+        <label class="field"><span>Colaborador</span>
+          <input id="qEmployee" type="text" autocomplete="off"></label>
+        <label class="field"><span>Tipo de rescisão</span>
+          <select id="qType">
+            <option value="">Selecione o tipo</option>
+            ${RESCISSION_TYPES.map((t) => `<option value="${t.value}">${esc(t.label)}</option>`).join('')}
+          </select></label>
+        <div class="form-actions">
+          <button type="submit">Criar rescisão</button>
+          <button type="button" class="secondary" id="qCancel">Cancelar</button>
+        </div>
+      </form>
+    </div>`;
+
+  const $ = (sel) => root.querySelector(sel);
+  $('#qCancel').onclick = goList;
+  $('#pipQuickForm').onsubmit = async (ev) => {
+    ev.preventDefault();
+    try {
+      await createNote('rescisao', {
+        company: $('#qCompany').value,
+        employee_name: $('#qEmployee').value,
+        rescission_type: $('#qType').value,
+      });
+      goList();
+      showToast('Rescisão criada! Toque em “Editar” para colocar as datas.', win.document);
+    } catch (err) {
+      showToast(err.message, win.document);
+    }
+  };
+  $('#qCompany').focus();
 }

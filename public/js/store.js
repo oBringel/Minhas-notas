@@ -1,11 +1,11 @@
 // Dados compartilhados: a página e a janelinha flutuante usam as mesmas notas,
 // então tudo que muda em uma aparece na outra.
 import { api } from './api.js';
-import { bloom, floatText } from './flowers.js';
+import { bloom, floatEmoji, floatText } from './flowers.js';
 import { loadScore, nudgeScore, setScore } from './score.js';
-import { fmtDateTime, isAdmission } from './util.js';
+import { fmtDateTime, happyFace, isAdmission, isRescission } from './util.js';
 
-export const state = { notes: [], term: '' };
+export const state = { notes: [], trash: [], vacations: [], term: '' };
 export const findNote = (id) => state.notes.find((n) => n.id === id);
 
 // ---------- Avisos entre telas ----------
@@ -32,14 +32,15 @@ export async function loadAll(boot) {
   notify('notes');
 }
 
-export async function createNote(kind) {
-  const n = await api.createNote({ kind });
+export async function createNote(kind, extra = {}) {
+  const n = await api.createNote({ kind, ...extra });
   state.notes.unshift(n);
   state.term = '';
   notify('notes');
   return n;
 }
 
+// Excluir manda para a lixeira (o servidor só marca a data; nada é apagado).
 export async function removeNote(n) {
   clearPending(n.id);
   await api.deleteNote(n.id);
@@ -48,14 +49,74 @@ export async function removeNote(n) {
   notify('notes');
 }
 
+// ---------- Lixeira ----------
+export async function loadTrash() {
+  state.trash = await api.listTrash();
+  notify('trash');
+}
+
+export async function restoreNote(n) {
+  const back = await api.restoreNote(n.id);
+  state.trash = state.trash.filter((x) => x.id !== n.id);
+  if (back && !findNote(back.id)) state.notes.unshift(back);
+  notify('notes');
+  notify('trash');
+  return back;
+}
+
+// "Para sempre" aqui é só fora da interface: o conteúdo continua guardado no banco.
+export async function purgeNote(n) {
+  await api.purgeNote(n.id);
+  state.trash = state.trash.filter((x) => x.id !== n.id);
+  notify('trash');
+}
+
+// ---------- Férias ----------
+// Ficam na mesma store porque o Dashboard e o Calendário também usam as datas.
+export async function loadVacations() {
+  state.vacations = await api.listVacations();
+  notify('vacations');
+}
+
+export async function createVacation(data) {
+  const v = await api.createVacation(data);
+  state.vacations.push(v);
+  notify('vacations');
+  notify('pendencias');
+  return v;
+}
+
+export async function updateVacation(id, data) {
+  const v = await api.updateVacation(id, data);
+  state.vacations = state.vacations.map((x) => (x.id === id ? v : x));
+  notify('vacations');
+  notify('pendencias');
+  return v;
+}
+
+export async function deleteVacation(id) {
+  await api.deleteVacation(id);
+  state.vacations = state.vacations.filter((x) => x.id !== id);
+  notify('vacations');
+  notify('pendencias');
+}
+
 // ---------- Salvamento ----------
 export function savePayload(n) {
-  return isAdmission(n)
-    ? {
-        employee_name: n.employee_name, company: n.company, admission_date: n.admission_date || null,
-        body: n.body, event_vt: n.event_vt, event_vr: n.event_vr,
-      }
-    : { title: n.title, body: n.body };
+  if (isAdmission(n)) {
+    return {
+      employee_name: n.employee_name, company: n.company, admission_date: n.admission_date || null,
+      body: n.body, event_vt: n.event_vt, event_vr: n.event_vr,
+    };
+  }
+  if (isRescission(n)) {
+    return {
+      employee_name: n.employee_name, company: n.company,
+      last_day: n.last_day || null, pay_limit: n.pay_limit || null, send_limit: n.send_limit || null,
+      has_preview: Boolean(n.has_preview), preview_date: n.preview_date || null,
+    };
+  }
+  return { title: n.title, body: n.body };
 }
 
 const pending = new Map(); // id -> { win, timer, n }
@@ -130,6 +191,7 @@ export async function toggleTask(n, t, done, origin, source) {
   const doc = origin.ownerDocument;
   t.done = done;
   if (done) { bloom(origin); floatText(origin, '+1'); } // 🌸 florzinhas e ponto!
+  if (done && t.key === 'r:final') floatEmoji(origin, happyFace(t.id)); // 😄 último item da rescisão
   nudgeScore(done ? 1 : -1);
   notify('note', { id: n.id, source });
   try {
@@ -155,5 +217,13 @@ export async function setBenefit(n, key, enabled, source) {
     throw err;
   }
   if (!enabled) { n[eventField] = ''; loadScore(); }
+  notify('note', { id: n.id, source });
+}
+
+/** Troca o tipo da rescisão: o checklist muda (itens que continuam mantêm o que foi marcado). */
+export async function setRescissionType(n, type, source) {
+  n.tasks = await api.setRescissionType(n.id, type);
+  n.rescission_type = type;
+  loadScore();
   notify('note', { id: n.id, source });
 }
