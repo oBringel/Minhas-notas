@@ -1,3 +1,4 @@
+import { fillIcons } from './icons.js';
 import { flowerSVG } from './flowers.js';
 import { mountEditor } from './editor.js';
 import { initScore } from './score.js';
@@ -24,7 +25,7 @@ let editor = null;
 // ---------- Módulos que usam as notas ----------
 // Cada aba mostra um tipo de nota. A lista é a mesma; só filtra.
 const NOTE_VIEWS = {
-  notas: { kind: 'nota', list: '#list-notas', empty: 'Nenhuma nota ainda. Use “＋ Nova nota” para começar.' },
+  notas: { kind: 'nota', list: '#list-notas', empty: 'Nenhuma nota ainda. Use “Nova nota” para começar.' },
   admissao: { kind: 'admissao', list: '#list-admissao', empty: 'Nenhuma admissão cadastrada ainda.' },
   rescisao: { kind: 'rescisao', list: '#list-rescisao', empty: 'Nenhuma rescisão cadastrada ainda.' },
 };
@@ -342,3 +343,6 @@ function readBoot() {
   try { await loadVacations(); } catch { /* as férias são opcionais para o resto funcionar */ }
   go(location.hash.replace('#/', '') || 'dashboard');
 })();
+
+// Desenha os ícones estáticos (Lucide) que vieram no HTML.
+fillIcons();

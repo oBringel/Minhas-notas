@@ -141,3 +141,14 @@ CREATE TABLE IF NOT EXISTS events (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_events_day ON events(day);
+
+-- Datas do calendário cadastradas pela usuária (municipais, folgas, etc.)
+CREATE TABLE IF NOT EXISTS custom_dates (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       TEXT        NOT NULL,
+  day        DATE        NOT NULL,
+  kind       TEXT        NOT NULL DEFAULT 'personalizada', -- nacional | estadual | municipal | facultativo | comemorativo | personalizada
+  yearly     BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_custom_dates_day ON custom_dates(day);

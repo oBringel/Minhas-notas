@@ -579,14 +579,23 @@ app.delete('/api/checklist/:id', wrap(async (req, res) => {
 }));
 
 // ---------- Quadro de observações e mensagem do rodapé ----------
-const PANEL_KEYS = { board: ['board', 20000], footer: ['footer_message', 500] };
+const PANEL_KEYS = {
+  board: ['board', 20000], footer: ['footer_message', 500],
+  uf: ['calendar_uf', 2], city: ['calendar_city', 120],
+};
 
 app.get('/api/panel', wrap(async (_req, res) => {
   const { rows } = await pool.query(
-    `SELECT key, value FROM settings WHERE key IN ('board', 'footer_message')`
+    `SELECT key, value FROM settings
+      WHERE key IN ('board', 'footer_message', 'calendar_uf', 'calendar_city')`
   );
   const saved = Object.fromEntries(rows.map((r) => [r.key, r.value]));
-  res.json({ board: saved.board ?? '', footer: saved.footer_message ?? '' });
+  res.json({
+    board: saved.board ?? '',
+    footer: saved.footer_message ?? '',
+    uf: saved.calendar_uf ?? '',
+    city: saved.calendar_city ?? '',
+  });
 }));
 
 app.put('/api/panel/:part', wrap(async (req, res) => {
@@ -778,6 +787,54 @@ app.put('/api/events/:id', wrap(async (req, res) => {
 
 app.delete('/api/events/:id', wrap(async (req, res) => {
   await pool.query('DELETE FROM events WHERE id = $1', [req.params.id]);
+  res.status(204).end();
+}));
+
+// ---------- Datas do calendário cadastradas à mão ----------
+// Feriados municipais, aniversário da cidade, folgas internas. Os feriados
+// nacionais/estaduais não ficam aqui: são calculados no navegador (holidays.js).
+const DATE_KINDS = ['nacional', 'estadual', 'municipal', 'facultativo', 'comemorativo', 'personalizada'];
+const CUSTOM_DATE_FIELDS = `id, name, kind, yearly, to_char(day, 'YYYY-MM-DD') AS day, created_at`;
+
+app.get('/api/custom-dates', wrap(async (_req, res) => {
+  const { rows } = await pool.query(
+    `SELECT ${CUSTOM_DATE_FIELDS} FROM custom_dates ORDER BY day, lower(name)`
+  );
+  res.json(rows);
+}));
+
+app.post('/api/custom-dates', wrap(async (req, res) => {
+  const name = clean(req.body.name, 200);
+  const when = day(req.body.day);
+  if (!name) return res.status(400).json({ error: 'Escreva o nome da data.' });
+  if (!when) return res.status(400).json({ error: 'Escolha a data.' });
+  const { rows } = await pool.query(
+    `INSERT INTO custom_dates (name, day, kind, yearly)
+     VALUES ($1, $2, $3, $4) RETURNING ${CUSTOM_DATE_FIELDS}`,
+    [name, when, pick(DATE_KINDS, req.body.kind, 'personalizada'), Boolean(req.body.yearly)]
+  );
+  res.status(201).json(rows[0]);
+}));
+
+app.post('/api/custom-dates/:id/restore', (req, res) => res.status(404).json({ error: 'Nada para restaurar.' }));
+
+app.put('/api/custom-dates/:id', wrap(async (req, res) => {
+  const name = clean(req.body.name, 200);
+  const when = day(req.body.day);
+  if (!name) return res.status(400).json({ error: 'Escreva o nome da data.' });
+  if (!when) return res.status(400).json({ error: 'Escolha a data.' });
+  const { rows } = await pool.query(
+    `UPDATE custom_dates SET name = $1, day = $2, kind = $3, yearly = $4
+      WHERE id = $5 RETURNING ${CUSTOM_DATE_FIELDS}`,
+    [name, when, pick(DATE_KINDS, req.body.kind, 'personalizada'), Boolean(req.body.yearly),
+      req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Data não encontrada.' });
+  res.json(rows[0]);
+}));
+
+app.delete('/api/custom-dates/:id', wrap(async (req, res) => {
+  await pool.query('DELETE FROM custom_dates WHERE id = $1', [req.params.id]);
   res.status(204).end();
 }));
 

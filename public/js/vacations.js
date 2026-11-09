@@ -1,3 +1,4 @@
+import { icon } from './icons.js';
 // Férias: lista simples de quem sai, de quando até quando.
 import {
   createVacation, deleteVacation, loadVacations, state, updateVacation,
@@ -39,11 +40,11 @@ function render() {
       <div class="vacation-row" data-id="${v.id}">
         <span class="vname">${esc(v.employee_name || 'Sem nome')}</span>
         <span class="vcompany">${esc(v.company || '—')}</span>
-        <span class="vdates">🌴 ${esc(rangeLabel(v))}</span>
+        <span class="vdates">${icon('palmtree', { size: 15 })} ${esc(rangeLabel(v))}</span>
         <span class="vstatus"><span class="vac-badge ${status.key}">${status.label}</span></span>
         <span class="file-actions">
-          <button type="button" class="icon-btn" data-edit title="Editar">✏️</button>
-          <button type="button" class="icon-btn" data-del title="Excluir">🗑</button>
+          <button type="button" class="icon-btn" data-edit title="Editar">${icon('pencil', { size: 15 })}</button>
+          <button type="button" class="icon-btn" data-del title="Excluir">${icon('trash-2', { size: 15 })}</button>
         </span>
       </div>`;
     }).join('');
@@ -99,7 +100,7 @@ export function initVacations(options) {
         ctx.toast('Férias atualizadas.');
       } else {
         await createVacation(data);
-        ctx.toast('Férias cadastradas! 🌴');
+        ctx.toast('Férias cadastradas!');
       }
       closeForm();
       render();

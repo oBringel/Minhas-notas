@@ -184,3 +184,28 @@ Tudo fica no arquivo `.env`:
 | `PGSSL`        | `true` para bancos na nuvem (Supabase, Neon…)     |
 | `PORT`         | `3000`                                            |
 | `APP_TZ`       | `America/Fortaleza`                               |
+
+## Feriados do calendário
+
+O calendário **não depende de API externa**. O feriados.com.br não publica API, documentação de
+integração nem autorização para uso automático (são páginas HTML), então as funcionalidades
+equivalentes foram implementadas dentro do sistema:
+
+- **Nacionais fixos e móveis**: Lei 662/1949, Lei 6.802/1980 e Lei 14.759/2023 (Consciência Negra),
+  com Carnaval, Sexta-feira da Paixão e Corpus Christi calculados a partir da Páscoa
+  (`public/js/holidays.js`).
+- **Pontos facultativos**: os federais usuais (Carnaval, Quarta de Cinzas, Corpus Christi, 28/10,
+  24 e 31/12). Conferir a cada ano na portaria do MGI.
+- **Estaduais**: datas magnas e padroeiros na tabela `STATE_DATES` de `public/js/holidays.js`.
+  É uma base editável — acrescente ou corrija a UF ali quando a legislação local mudar.
+- **Municipais e personalizadas**: cadastradas em Calendário → “Datas personalizadas” e salvas na
+  tabela `custom_dates` (podem repetir todo ano).
+- **Localidade**: UF e cidade ficam em `settings` (`calendar_uf` e `calendar_city`).
+
+Se algum dia existir uma API oficial autorizada, basta trocar `holidaysFor()` por uma chamada com
+cache no servidor: a tela, o banco e as datas personalizadas continuam iguais.
+
+## Identidade visual
+
+Paleta bordô/rosa queimado/rosé, Playfair Display nos títulos e DM Sans nos textos, com ícones
+Lucide embutidos em `public/js/icons.js` (sem CDN, funcionam offline).

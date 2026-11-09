@@ -1,3 +1,4 @@
+import { icon } from './icons.js';
 // Arquivos: pequeno gerenciador de pastas e documentos de consulta.
 import { api } from './api.js';
 
@@ -11,13 +12,14 @@ const CATEGORIES = ['INSS', 'Tabelas', 'Legislação', 'Procedimentos', 'Documen
 const iconOf = (file) => {
   const mime = file.mime || '';
   const name = (file.name || '').toLowerCase();
-  if (mime.startsWith('image/')) return '🖼️';
-  if (mime === 'application/pdf') return '📕';
-  if (mime.includes('sheet') || /\.(xlsx?|csv|ods)$/.test(name)) return '📊';
-  if (mime.startsWith('text/') || /\.(txt|md|rtf)$/.test(name)) return '📄';
-  if (/(zip|rar|7z)$/.test(name)) return '🗜️';
-  if (/\.(docx?|odt)$/.test(name)) return '📘';
-  return '📎';
+  const size = 17;
+  if (mime.startsWith('image/')) return icon('file-image', { size });
+  if (mime === 'application/pdf') return icon('file-text', { size });
+  if (mime.includes('sheet') || /\.(xlsx?|csv|ods)$/.test(name)) return icon('file-spreadsheet', { size });
+  if (mime.startsWith('text/') || /\.(txt|md|rtf)$/.test(name)) return icon('file-text', { size });
+  if (/(zip|rar|7z)$/.test(name)) return icon('archive', { size });
+  if (/\.(docx?|odt)$/.test(name)) return icon('file-text', { size });
+  return icon('file', { size });
 };
 
 const sizeLabel = (bytes) => {
@@ -52,31 +54,31 @@ function renderTree() {
   const root = $('#folderTree');
   if (!root) return;
 
-  const row = (label, folder, depth, icon) => {
+  const row = (label, folder, depth, glyph) => {
     const active = sameFolder(state.current, folder?.id ?? null);
     const count = folder ? filesIn(folder.id).length : state.files.length;
     return `
       <div class="folder-node${active ? ' active' : ''}" data-folder="${folder?.id ?? ''}"
            role="button" tabindex="0" style="padding-left:${8 + depth * 14}px">
-        <span>${icon}</span>
+        <span>${glyph}</span>
         <span class="fname-tree">${label}</span>
         <span class="fcount">${count || ''}</span>
-        ${folder ? '<button type="button" class="fdel" data-delfolder title="Excluir pasta">✕</button>' : ''}
+        ${folder ? `<button type="button" class="fdel" data-delfolder title="Excluir pasta">${icon('x', { size: 13 })}</button>` : ''}
       </div>`;
   };
 
   const branch = (parent, depth) => childrenOf(parent)
-    .map((f) => row(f.name, f, depth, '📁') + branch(f.id, depth + 1))
+    .map((f) => row(f.name, f, depth, icon('folder', { size: 16 })) + branch(f.id, depth + 1))
     .join('');
 
-  root.innerHTML = row('Todos os arquivos', null, 0, '🗂️') + branch(null, 1);
+  root.innerHTML = row('Todos os arquivos', null, 0, icon('folder-tree', { size: 16 })) + branch(null, 1);
 }
 
 function renderCrumbs() {
   const root = $('#crumbs');
   if (!root) return;
   const path = pathOf(state.current);
-  const parts = [`<button type="button" class="crumb" data-folder="">🗂️ Arquivos</button>`];
+  const parts = [`<button type="button" class="crumb" data-folder="">${icon('folder-tree', { size: 15 })} Arquivos</button>`];
   for (const folder of path) {
     parts.push('<span class="crumb-sep">›</span>');
     parts.push(`<button type="button" class="crumb" data-folder="${folder.id}">${folder.name}</button>`);
@@ -105,13 +107,13 @@ function renderList() {
 
   const folderRows = folders.map((f) => `
     <div class="file-row" data-folder="${f.id}">
-      <span class="ficon">📁</span>
+      <span class="ficon">${icon('folder', { size: 17 })}</span>
       <span class="fname" role="button" tabindex="0" data-openfolder>${f.name}</span>
       <span class="fmeta">${filesIn(f.id).length} arquivo(s)</span>
       <span></span><span class="fmeta">pasta</span>
       <span class="file-actions">
-        <button type="button" class="icon-btn" data-renamefolder title="Renomear">✏️</button>
-        <button type="button" class="icon-btn" data-delfolder title="Excluir">🗑</button>
+        <button type="button" class="icon-btn" data-renamefolder title="Renomear">${icon('pencil', { size: 15 })}</button>
+        <button type="button" class="icon-btn" data-delfolder title="Excluir">${icon('trash-2', { size: 15 })}</button>
       </span>
     </div>`).join('');
 
@@ -127,8 +129,8 @@ function renderList() {
       <span class="file-actions">
         <a class="file-open" href="/api/files/${f.id}/download" target="_blank" rel="noopener"
            title="Abrir ou baixar">abrir</a>
-        <button type="button" class="icon-btn" data-rename title="Renomear">✏️</button>
-        <button type="button" class="icon-btn" data-del title="Excluir">🗑</button>
+        <button type="button" class="icon-btn" data-rename title="Renomear">${icon('pencil', { size: 15 })}</button>
+        <button type="button" class="icon-btn" data-del title="Excluir">${icon('trash-2', { size: 15 })}</button>
       </span>
     </div>`).join('');
 

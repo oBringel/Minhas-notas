@@ -1,3 +1,4 @@
+import { icon } from './icons.js';
 // Dashboard: quadro de pendências, quadro de observações e checklist.
 import { api } from './api.js';
 import { state } from './store.js';
@@ -135,8 +136,8 @@ function renderBoard() {
         <div class="pend-actions">
           ${p.auto
             ? '<button type="button" class="icon-btn" data-open title="Abrir o módulo">abrir</button>'
-            : '<button type="button" class="icon-btn" data-edit title="Editar">✏️</button>'
-              + '<button type="button" class="icon-btn" data-del title="Excluir">🗑</button>'}
+            : '<button type="button" class="icon-btn" data-edit title="Editar">' + icon('pencil', { size: 15 }) + '</button>'
+              + '<button type="button" class="icon-btn" data-del title="Excluir">' + icon('trash-2', { size: 15 }) + '</button>'}
         </div>
       </div>`;
     }).join('');
@@ -183,7 +184,7 @@ function renderChecklist() {
     <li class="${item.done ? 'done' : ''}" data-id="${item.id}">
       <input type="checkbox" ${item.done ? 'checked' : ''} aria-label="Concluir ${esc(item.text)}">
       <input class="ci-text" type="text" value="${esc(item.text)}" maxlength="500" aria-label="Item do checklist">
-      <button type="button" class="icon-btn" data-del title="Excluir item">🗑</button>
+      <button type="button" class="icon-btn" data-del title="Excluir item">${icon('trash-2', { size: 15 })}</button>
     </li>`).join('');
 }
 

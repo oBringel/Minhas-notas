@@ -64,6 +64,10 @@ export const api = {
   deleteVacation: (id) => request('DELETE', `/api/vacations/${id}`),
 
   // ---------- Calendário ----------
+  listCustomDates: () => request('GET', '/api/custom-dates'),
+  createCustomDate: (data) => request('POST', '/api/custom-dates', data),
+  updateCustomDate: (id, data) => request('PUT', `/api/custom-dates/${id}`, data),
+  deleteCustomDate: (id) => request('DELETE', `/api/custom-dates/${id}`),
   listEvents: () => request('GET', '/api/events'),
   createEvent: (data) => request('POST', '/api/events', data),
   updateEvent: (id, data) => request('PUT', `/api/events/${id}`, data),
