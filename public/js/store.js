@@ -5,7 +5,7 @@ import { bloom, floatEmoji, floatText } from './flowers.js';
 import { loadScore, nudgeScore, setScore } from './score.js';
 import { fmtDateTime, happyFace, isAdmission, isRescission } from './util.js';
 
-export const state = { notes: [], trash: [], term: '' };
+export const state = { notes: [], trash: [], vacations: [], term: '' };
 export const findNote = (id) => state.notes.find((n) => n.id === id);
 
 // ---------- Avisos entre telas ----------
@@ -69,6 +69,36 @@ export async function purgeNote(n) {
   await api.purgeNote(n.id);
   state.trash = state.trash.filter((x) => x.id !== n.id);
   notify('trash');
+}
+
+// ---------- Férias ----------
+// Ficam na mesma store porque o Dashboard e o Calendário também usam as datas.
+export async function loadVacations() {
+  state.vacations = await api.listVacations();
+  notify('vacations');
+}
+
+export async function createVacation(data) {
+  const v = await api.createVacation(data);
+  state.vacations.push(v);
+  notify('vacations');
+  notify('pendencias');
+  return v;
+}
+
+export async function updateVacation(id, data) {
+  const v = await api.updateVacation(id, data);
+  state.vacations = state.vacations.map((x) => (x.id === id ? v : x));
+  notify('vacations');
+  notify('pendencias');
+  return v;
+}
+
+export async function deleteVacation(id) {
+  await api.deleteVacation(id);
+  state.vacations = state.vacations.filter((x) => x.id !== id);
+  notify('vacations');
+  notify('pendencias');
 }
 
 // ---------- Salvamento ----------

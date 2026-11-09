@@ -14,7 +14,8 @@ let compression = null;
 try { compression = require('compression'); }
 catch { console.warn('Dica: rode "npm install" para ativar a compressão das páginas.'); }
 if (compression) app.use(compression());
-app.use(express.json({ limit: '1mb' }));
+// 20 MB: os arquivos do módulo Arquivos vão em base64 (12 MB de arquivo ≈ 16 MB de JSON)
+app.use(express.json({ limit: '20mb' }));
 
 const wrap = (fn) => (req, res, next) => fn(req, res, next).catch(next);
 const clean = (value, max) => String(value ?? '').trim().slice(0, max);
@@ -472,6 +473,312 @@ app.put('/api/rewards', wrap(async (req, res) => {
   const rewards = Object.fromEntries(MILESTONES.map((m) => [m, clean(input[m], 80)]));
   await upsertSetting('rewards', JSON.stringify(rewards));
   res.json(await getScore(pool));
+}));
+
+// =====================================================================
+//  Painel de RH: pendências, checklist, observações, arquivos, férias e eventos
+// =====================================================================
+
+// ---------- Quadro de Pendências ----------
+const PRIORITIES = ['alta', 'media', 'baixa'];
+const MODULES = ['admissao', 'rescisao', 'ferias', 'geral'];
+const pick = (list, value, fallback) => (list.includes(value) ? value : fallback);
+
+const PENDENCIA_FIELDS = `id, title, description, priority, module, done,
+  to_char(due_date, 'YYYY-MM-DD') AS due_date, created_at`;
+
+app.get('/api/pendencias', wrap(async (_req, res) => {
+  const { rows } = await pool.query(
+    `SELECT ${PENDENCIA_FIELDS} FROM pendencias
+      ORDER BY done, due_date NULLS LAST, created_at`
+  );
+  res.json(rows);
+}));
+
+app.post('/api/pendencias', wrap(async (req, res) => {
+  const title = clean(req.body.title, 200);
+  if (!title) return res.status(400).json({ error: 'Escreva o título da pendência.' });
+  const { rows } = await pool.query(
+    `INSERT INTO pendencias (title, description, due_date, priority, module)
+     VALUES ($1, $2, $3, $4, $5) RETURNING ${PENDENCIA_FIELDS}`,
+    [
+      title, clean(req.body.description, 4000), day(req.body.due_date),
+      pick(PRIORITIES, req.body.priority, 'media'), pick(MODULES, req.body.module, 'geral'),
+    ]
+  );
+  res.status(201).json(rows[0]);
+}));
+
+app.put('/api/pendencias/:id', wrap(async (req, res) => {
+  const title = clean(req.body.title, 200);
+  if (!title) return res.status(400).json({ error: 'Escreva o título da pendência.' });
+  const { rows } = await pool.query(
+    `UPDATE pendencias SET title = $1, description = $2, due_date = $3,
+            priority = $4, module = $5, done = $6,
+            done_at = CASE WHEN $6 THEN COALESCE(done_at, now()) ELSE NULL END
+      WHERE id = $7 RETURNING ${PENDENCIA_FIELDS}`,
+    [
+      title, clean(req.body.description, 4000), day(req.body.due_date),
+      pick(PRIORITIES, req.body.priority, 'media'), pick(MODULES, req.body.module, 'geral'),
+      Boolean(req.body.done), req.params.id,
+    ]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Pendência não encontrada.' });
+  res.json(rows[0]);
+}));
+
+app.patch('/api/pendencias/:id/done', wrap(async (req, res) => {
+  const done = Boolean(req.body.done);
+  const { rows } = await pool.query(
+    `UPDATE pendencias SET done = $1,
+            done_at = CASE WHEN $1 THEN COALESCE(done_at, now()) ELSE NULL END
+      WHERE id = $2 RETURNING ${PENDENCIA_FIELDS}`,
+    [done, req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Pendência não encontrada.' });
+  res.json(rows[0]);
+}));
+
+app.delete('/api/pendencias/:id', wrap(async (req, res) => {
+  await pool.query('DELETE FROM pendencias WHERE id = $1', [req.params.id]);
+  res.status(204).end();
+}));
+
+// ---------- Checklist ----------
+const CHECK_FIELDS = 'id, text, done, position, created_at';
+
+app.get('/api/checklist', wrap(async (_req, res) => {
+  const { rows } = await pool.query(`SELECT ${CHECK_FIELDS} FROM checklist ORDER BY position, created_at`);
+  res.json(rows);
+}));
+
+app.post('/api/checklist', wrap(async (req, res) => {
+  const text = clean(req.body.text, 500);
+  if (!text) return res.status(400).json({ error: 'Escreva o item do checklist.' });
+  const { rows } = await pool.query(
+    `INSERT INTO checklist (text) VALUES ($1) RETURNING ${CHECK_FIELDS}`, [text]
+  );
+  res.status(201).json(rows[0]);
+}));
+
+app.put('/api/checklist/:id', wrap(async (req, res) => {
+  const text = clean(req.body.text, 500);
+  const done = Boolean(req.body.done);
+  const { rows } = await pool.query(
+    `UPDATE checklist SET text = CASE WHEN $1 = '' THEN text ELSE $1 END, done = $2
+      WHERE id = $3 RETURNING ${CHECK_FIELDS}`,
+    [text, done, req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Item não encontrado.' });
+  res.json(rows[0]);
+}));
+
+app.delete('/api/checklist/:id', wrap(async (req, res) => {
+  await pool.query('DELETE FROM checklist WHERE id = $1', [req.params.id]);
+  res.status(204).end();
+}));
+
+// ---------- Quadro de observações e mensagem do rodapé ----------
+const PANEL_KEYS = { board: ['board', 20000], footer: ['footer_message', 500] };
+
+app.get('/api/panel', wrap(async (_req, res) => {
+  const { rows } = await pool.query(
+    `SELECT key, value FROM settings WHERE key IN ('board', 'footer_message')`
+  );
+  const saved = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  res.json({ board: saved.board ?? '', footer: saved.footer_message ?? '' });
+}));
+
+app.put('/api/panel/:part', wrap(async (req, res) => {
+  const entry = PANEL_KEYS[req.params.part];
+  if (!entry) return res.status(404).json({ error: 'Campo desconhecido.' });
+  const [key, max] = entry;
+  await upsertSetting(key, String(req.body.text ?? '').slice(0, max));
+  res.json({ ok: true });
+}));
+
+// ---------- Arquivos e pastas ----------
+// A lista vem inteira (pastas + dados dos arquivos, sem o conteúdo): são poucas
+// linhas e a tela monta a árvore sozinha, sem uma consulta por pasta.
+app.get('/api/files', wrap(async (_req, res) => {
+  const [folders, files] = await Promise.all([
+    pool.query(`SELECT id, name, parent_id, created_at FROM folders ORDER BY lower(name)`),
+    pool.query(
+      `SELECT id, folder_id, name, mime, size, category, created_at
+         FROM files ORDER BY lower(name)`
+    ),
+  ]);
+  res.json({ folders: folders.rows, files: files.rows });
+}));
+
+app.post('/api/folders', wrap(async (req, res) => {
+  const name = clean(req.body.name, 120);
+  if (!name) return res.status(400).json({ error: 'Dê um nome para a pasta.' });
+  const parent = req.body.parent_id ? String(req.body.parent_id) : null;
+  const { rows } = await pool.query(
+    `INSERT INTO folders (name, parent_id) VALUES ($1, $2)
+     RETURNING id, name, parent_id, created_at`,
+    [name, parent]
+  );
+  res.status(201).json(rows[0]);
+}));
+
+app.put('/api/folders/:id', wrap(async (req, res) => {
+  const name = clean(req.body.name, 120);
+  if (!name) return res.status(400).json({ error: 'Dê um nome para a pasta.' });
+  const { rows } = await pool.query(
+    `UPDATE folders SET name = $1 WHERE id = $2 RETURNING id, name, parent_id, created_at`,
+    [name, req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Pasta não encontrada.' });
+  res.json(rows[0]);
+}));
+
+app.delete('/api/folders/:id', wrap(async (req, res) => {
+  await pool.query('DELETE FROM folders WHERE id = $1', [req.params.id]);
+  res.status(204).end();
+}));
+
+// O arquivo chega em base64 (o navegador lê e manda no JSON), sem precisar de
+// biblioteca de upload. O conteúdo fica no banco e nunca é enviado na listagem.
+const MAX_FILE_BYTES = 12 * 1024 * 1024;
+app.post('/api/files', wrap(async (req, res) => {
+  const name = clean(req.body.name, 200);
+  if (!name) return res.status(400).json({ error: 'O arquivo precisa de um nome.' });
+  let data;
+  try { data = Buffer.from(String(req.body.data || ''), 'base64'); }
+  catch { return res.status(400).json({ error: 'Não consegui ler o arquivo.' }); }
+  if (!data.length) return res.status(400).json({ error: 'O arquivo está vazio.' });
+  if (data.length > MAX_FILE_BYTES) {
+    return res.status(413).json({ error: 'O arquivo é maior que 12 MB.' });
+  }
+  const { rows } = await pool.query(
+    `INSERT INTO files (folder_id, name, mime, size, category, data)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, folder_id, name, mime, size, category, created_at`,
+    [
+      req.body.folder_id ? String(req.body.folder_id) : null, name,
+      clean(req.body.mime, 150) || 'application/octet-stream', data.length,
+      clean(req.body.category, 80), data,
+    ]
+  );
+  res.status(201).json(rows[0]);
+}));
+
+app.put('/api/files/:id', wrap(async (req, res) => {
+  const name = clean(req.body.name, 200);
+  if (!name) return res.status(400).json({ error: 'O arquivo precisa de um nome.' });
+  const { rows } = await pool.query(
+    `UPDATE files SET name = $1, category = $2 WHERE id = $3
+     RETURNING id, folder_id, name, mime, size, category, created_at`,
+    [name, clean(req.body.category, 80), req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Arquivo não encontrado.' });
+  res.json(rows[0]);
+}));
+
+app.delete('/api/files/:id', wrap(async (req, res) => {
+  await pool.query('DELETE FROM files WHERE id = $1', [req.params.id]);
+  res.status(204).end();
+}));
+
+app.get('/api/files/:id/download', wrap(async (req, res) => {
+  const { rows } = await pool.query('SELECT name, mime, data FROM files WHERE id = $1', [req.params.id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Arquivo não encontrado.' });
+  const { name, mime, data } = rows[0];
+  const safe = /^(image\/|application\/pdf|text\/)/.test(mime);
+  res.set('Content-Type', mime);
+  res.set('Content-Disposition',
+    `${safe ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(name)}`);
+  res.send(data);
+}));
+
+// ---------- Férias ----------
+const VACATION_FIELDS = `id, employee_name, company, note,
+  to_char(start_date, 'YYYY-MM-DD') AS start_date,
+  to_char(end_date, 'YYYY-MM-DD') AS end_date, created_at`;
+
+app.get('/api/vacations', wrap(async (_req, res) => {
+  const { rows } = await pool.query(
+    `SELECT ${VACATION_FIELDS} FROM vacations ORDER BY start_date NULLS LAST, created_at`
+  );
+  res.json(rows);
+}));
+
+app.post('/api/vacations', wrap(async (req, res) => {
+  const employee = clean(req.body.employee_name, 200);
+  if (!employee) return res.status(400).json({ error: 'Escreva o nome do colaborador.' });
+  const { rows } = await pool.query(
+    `INSERT INTO vacations (employee_name, company, start_date, end_date, note)
+     VALUES ($1, $2, $3, $4, $5) RETURNING ${VACATION_FIELDS}`,
+    [employee, clean(req.body.company, 200), day(req.body.start_date), day(req.body.end_date),
+      clean(req.body.note, 2000)]
+  );
+  res.status(201).json(rows[0]);
+}));
+
+app.put('/api/vacations/:id', wrap(async (req, res) => {
+  const employee = clean(req.body.employee_name, 200);
+  if (!employee) return res.status(400).json({ error: 'Escreva o nome do colaborador.' });
+  const { rows } = await pool.query(
+    `UPDATE vacations SET employee_name = $1, company = $2, start_date = $3,
+            end_date = $4, note = $5
+      WHERE id = $6 RETURNING ${VACATION_FIELDS}`,
+    [employee, clean(req.body.company, 200), day(req.body.start_date), day(req.body.end_date),
+      clean(req.body.note, 2000), req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Férias não encontrada.' });
+  res.json(rows[0]);
+}));
+
+app.delete('/api/vacations/:id', wrap(async (req, res) => {
+  await pool.query('DELETE FROM vacations WHERE id = $1', [req.params.id]);
+  res.status(204).end();
+}));
+
+// ---------- Eventos do calendário ----------
+const EVENT_CATEGORIES = ['prazo', 'admissao', 'ferias', 'documento', 'feriado', 'geral'];
+const EVENT_FIELDS = `id, title, description, category, module,
+  to_char(day, 'YYYY-MM-DD') AS day, created_at`;
+
+app.get('/api/events', wrap(async (_req, res) => {
+  const { rows } = await pool.query(`SELECT ${EVENT_FIELDS} FROM events ORDER BY day, created_at`);
+  res.json(rows);
+}));
+
+app.post('/api/events', wrap(async (req, res) => {
+  const title = clean(req.body.title, 200);
+  const when = day(req.body.day);
+  if (!title) return res.status(400).json({ error: 'Escreva o título do evento.' });
+  if (!when) return res.status(400).json({ error: 'Escolha a data do evento.' });
+  const { rows } = await pool.query(
+    `INSERT INTO events (title, description, day, category, module)
+     VALUES ($1, $2, $3, $4, $5) RETURNING ${EVENT_FIELDS}`,
+    [title, clean(req.body.description, 2000), when,
+      pick(EVENT_CATEGORIES, req.body.category, 'geral'), pick(MODULES, req.body.module, 'geral')]
+  );
+  res.status(201).json(rows[0]);
+}));
+
+app.put('/api/events/:id', wrap(async (req, res) => {
+  const title = clean(req.body.title, 200);
+  const when = day(req.body.day);
+  if (!title) return res.status(400).json({ error: 'Escreva o título do evento.' });
+  if (!when) return res.status(400).json({ error: 'Escolha a data do evento.' });
+  const { rows } = await pool.query(
+    `UPDATE events SET title = $1, description = $2, day = $3, category = $4, module = $5
+      WHERE id = $6 RETURNING ${EVENT_FIELDS}`,
+    [title, clean(req.body.description, 2000), when,
+      pick(EVENT_CATEGORIES, req.body.category, 'geral'), pick(MODULES, req.body.module, 'geral'),
+      req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Evento não encontrado.' });
+  res.json(rows[0]);
+}));
+
+app.delete('/api/events/:id', wrap(async (req, res) => {
+  await pool.query('DELETE FROM events WHERE id = $1', [req.params.id]);
+  res.status(204).end();
 }));
 
 // ---------- Página inicial ----------

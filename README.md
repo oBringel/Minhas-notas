@@ -1,6 +1,6 @@
-# 🌸 Minhas Notas
+# 🌸 Rotinas do DP | P&P
 
-Notas e checklists com banco de dados **Postgres**, pontuação do mês, florzinhas e uma **janelinha flutuante** que fica por cima dos outros programas.
+Painel de gestão de RH com **Postgres**: dashboard de pendências, notas, admissão, rescisão, férias, calculadora, calendário e arquivos — mais a pontuação do mês, as florzinhas e uma **janelinha flutuante** que fica por cima dos outros programas.
 
 ## Como rodar
 
@@ -41,9 +41,16 @@ notas-checklist/
 │   ├── index.html
 │   ├── css/
 │   │   ├── style.css      # visual rosa
+│   │   ├── panel.css      # menu, dashboard, arquivos, calendário e rodapé
 │   │   └── pip.css        # visual da janelinha flutuante
 │   └── js/
-│       ├── app.js         # página principal (lista + abrir/fechar o editor)
+│       ├── app.js         # menu, módulos, listas e gaveta do editor
+│       ├── dashboard.js   # pendências, observações e checklist
+│       ├── files.js       # pastas e arquivos
+│       ├── calendar.js    # calendário, feriados e eventos
+│       ├── vacations.js   # férias
+│       ├── calculator.js  # férias, 13º, horas extras e porcentagem
+│       ├── notice.js      # mensagem fixa do rodapé
 │       ├── editor.js      # editor de nota/admissão (usado na página e na janelinha)
 │       ├── store.js       # dados compartilhados e salvamento
 │       ├── pip.js         # janelinha flutuante
@@ -54,6 +61,47 @@ notas-checklist/
 ├── docker-compose.yml
 └── .env.example
 ```
+
+## Menu e módulos
+
+O menu fica à esquerda no computador e vira uma faixa que rola no celular. Cada item troca a página pela âncora (`#/dashboard`, `#/notas`, `#/admissao`, `#/rescisao`, `#/ferias`, `#/calculadora`, `#/calendario`, `#/arquivos`), então o botão voltar do navegador funciona.
+
+- **Dashboard:** cartão de desempenho, Quadro de Pendências, Quadro de Observações, Checklist e atalhos dos módulos.
+- **Notas / Admissão / Rescisão:** a mesma lista, separada por tipo. O editor abre numa gaveta à direita, em qualquer módulo.
+- **Férias:** quem sai, de quando até quando, com a situação calculada (programada, em andamento, concluída).
+- **Calculadora:** férias + 1/3, 13º proporcional, horas extras e porcentagem. Só contas de apoio (sem INSS/IRRF).
+- **Calendário:** mês tradicional, com feriados nacionais, eventos e as datas que vêm dos outros módulos.
+- **Arquivos:** pastas e subpastas com os documentos de consulta.
+
+## Quadro de Pendências
+
+Fica no Dashboard, dividido em **Para hoje**, **Para esta semana** e **Pendências futuras**.
+
+- **＋ Nova pendência:** título, descrição, vencimento, prioridade (alta/média/baixa) e módulo (Geral, Admissão, Rescisão ou Férias). Atrasadas ficam com a borda rosa e o aviso "X dias de atraso"; concluídas somem (o botão *Mostrar concluídas* traz de volta).
+- **Automáticas:** rescisões com checklist em aberto (prazo = envio da prévia), admissões com checklist em aberto (prazo = data de admissão) e férias que ainda vão começar entram sozinhas no quadro, com a etiqueta *automática*. Elas não são cadastradas de novo: o botão **abrir** leva para o módulo, e elas desaparecem quando o checklist é concluído.
+
+## Observações, Checklist e rodapé
+
+- **Quadro de Observações:** campo grande, salvo sozinho 0,7 s depois da última tecla (fica na tabela `settings`, chave `board`). *Limpar* esvazia.
+- **Checklist:** adicionar, marcar/desmarcar, editar o texto no lugar (salva ao sair do campo) e excluir. Fica na tabela `checklist`.
+- **Mensagem do rodapé:** barra fixa embaixo, visível em todas as páginas. **✏️ Editar** escreve, **Salvar** guarda (`settings` / `footer_message`) e **Limpar** deixa vazia.
+
+## Arquivos
+
+Gerenciador simples: pastas, subpastas e documentos.
+
+- **＋ Nova pasta** cria dentro da pasta aberta; o nome é pedido na hora. Dá para renomear e excluir (excluir pasta remove o que está dentro).
+- **⬆ Enviar arquivo** aceita vários de uma vez, até **12 MB** cada. O conteúdo é guardado no próprio banco (coluna `files.data`, BYTEA), então nada se perde ao reiniciar.
+- Cada arquivo tem uma **categoria** (INSS, Tabelas, Legislação, Procedimentos, Documentos, Imagens, Outros — ou uma nova, digitada).
+- **abrir** mostra o PDF/imagem no navegador (o resto baixa). Para renomear, ✏️.
+
+## Calendário
+
+- Mês e ano: setas para os lados, `«` `»` para o ano e a lista de anos; **Hoje** volta para o mês atual.
+- **Cores dos dias:** segunda a sexta em preto, sábado em rosa, domingo em lilás; feriado nacional em rosa-escuro sublinhado. O dia de hoje ganha um círculo.
+- **Feriados:** calculados no navegador (fixos + Carnaval, Paixão e Corpus Christi pela Páscoa). Não precisa de internet.
+- **Eventos:** clique no dia, preencha título, descrição, categoria e módulo. Os eventos aparecem como etiquetas no dia e na lista ao lado.
+- **Automáticos:** data de admissão, envio da prévia e pagamento das rescisões, início e volta das férias. São só leitura — mudam junto com o módulo de origem.
 
 ## Notas e admissões
 
@@ -123,6 +171,7 @@ Cada item concluído vale **1 ponto**. O cartão no topo mostra o desempenho do 
 - Notas e pontuação já vêm dentro do HTML, então a tela abre pronta.
 - CSS fica em cache; JavaScript é só conferido (resposta 304, sem baixar de novo); páginas são comprimidas.
 - O servidor faz uma ida ao banco por ação (antes eram várias) e mantém a conexão aberta.
+- Os arquivos não são baixados na listagem: o conteúdo só sai do banco quando alguém abre o documento.
 - Use `127.0.0.1` no `DATABASE_URL`: no Windows, `localhost` pode causar uma espera a cada conexão.
 
 ## Configuração do banco

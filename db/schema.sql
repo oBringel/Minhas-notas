@@ -67,3 +67,77 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0
 ALTER TABLE notes ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;  -- foi para a lixeira
 ALTER TABLE notes ADD COLUMN IF NOT EXISTS purged_at  TIMESTAMPTZ;  -- "excluída para sempre" (sai da lixeira, conteúdo fica no banco)
 CREATE INDEX IF NOT EXISTS idx_notes_deleted ON notes(deleted_at) WHERE deleted_at IS NOT NULL;
+
+-- =====================================================================
+--  Painel de RH (Dashboard, Arquivos, Calendário, Férias)
+-- =====================================================================
+
+-- Quadro de Pendências: as digitadas à mão.
+-- As que vêm dos módulos (rescisão, admissão, férias) são calculadas na hora,
+-- então não precisam ser cadastradas de novo aqui.
+CREATE TABLE IF NOT EXISTS pendencias (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title       TEXT        NOT NULL,
+  description TEXT        NOT NULL DEFAULT '',
+  due_date    DATE,
+  priority    TEXT        NOT NULL DEFAULT 'media',  -- alta | media | baixa
+  module      TEXT        NOT NULL DEFAULT 'geral',  -- admissao | rescisao | ferias | geral
+  done        BOOLEAN     NOT NULL DEFAULT FALSE,
+  done_at     TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_pendencias_due ON pendencias(due_date);
+
+-- Checklist rápido do dia a dia
+CREATE TABLE IF NOT EXISTS checklist (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  text       TEXT        NOT NULL,
+  done       BOOLEAN     NOT NULL DEFAULT FALSE,
+  position   SERIAL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Arquivos: pastas (com subpastas) e os documentos guardados dentro delas.
+-- O conteúdo fica no próprio banco (BYTEA), então nada se perde ao reiniciar.
+CREATE TABLE IF NOT EXISTS folders (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name       TEXT        NOT NULL,
+  parent_id  UUID        REFERENCES folders(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS files (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  folder_id  UUID        REFERENCES folders(id) ON DELETE CASCADE,
+  name       TEXT        NOT NULL,
+  mime       TEXT        NOT NULL DEFAULT 'application/octet-stream',
+  size       INTEGER     NOT NULL DEFAULT 0,
+  category   TEXT        NOT NULL DEFAULT '',
+  data       BYTEA       NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_files_folder ON files(folder_id);
+
+-- Férias: quem sai, de quando até quando
+CREATE TABLE IF NOT EXISTS vacations (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  employee_name TEXT        NOT NULL DEFAULT '',
+  company       TEXT        NOT NULL DEFAULT '',
+  start_date    DATE,
+  end_date      DATE,
+  note          TEXT        NOT NULL DEFAULT '',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_vacations_start ON vacations(start_date);
+
+-- Eventos e compromissos do calendário
+CREATE TABLE IF NOT EXISTS events (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title       TEXT        NOT NULL,
+  description TEXT        NOT NULL DEFAULT '',
+  day         DATE        NOT NULL,
+  category    TEXT        NOT NULL DEFAULT 'geral',  -- prazo | admissao | ferias | documento | feriado | geral
+  module      TEXT        NOT NULL DEFAULT '',       -- admissao | rescisao | ferias | geral
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_events_day ON events(day);
