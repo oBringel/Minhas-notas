@@ -97,28 +97,11 @@ export function rescissionStatus(n, today = todayStr()) {
   return { key: 'ok', emoji: '🙂', label: 'Dentro do prazo' };
 }
 
-/** Situação de admissão: fica verdinha quando o checklist está concluído. */
-export function admissionStatus(n, today = todayStr()) {
-  if (isComplete(n)) return { key: 'done', emoji: '✓', label: 'Concluída' };
-  if (!validDay(n.admission_date)) return { key: 'none', emoji: '', label: '' };
-  const d = diffDays(n.admission_date, today);
-  if (d < 0) return { key: 'late', emoji: '!', label: `${-d} dia${d === -1 ? '' : 's'} de atraso` };
-  if (d === 0) return { key: 'today', emoji: '•', label: 'Admissão hoje' };
-  return { key: 'ok', emoji: '', label: `Admissão em ${fmtDay(n.admission_date)}` };
-}
-
-/** Classes e carinha de uma nota para as listas. Rescisão e admissão ficam
- *  verdinhas quando concluídas (como a rescisão já fazia). */
+/** Classes e carinha de uma nota para as listas. */
 export function noteFace(n) {
-  if (isRescission(n)) {
-    const s = rescissionStatus(n);
-    return s.key === 'none' ? null : s;
-  }
-  if (isAdmission(n)) {
-    const s = admissionStatus(n);
-    return s.key === 'none' || (s.key === 'ok' && !s.emoji) ? null : s;
-  }
-  return null;
+  if (!isRescission(n)) return null;
+  const s = rescissionStatus(n);
+  return s.key === 'none' ? null : s;
 }
 
 // Carinha feliz do último item da rescisão

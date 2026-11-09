@@ -1,285 +1,403 @@
-// Central de operações: KPIs, pendências priorizadas e próximos compromissos.
-import {
-  esc as escapeHtml, isoToday, formatDate, parseYmd, isComplete, hideDrawer,
-  rescissionStatus, admissionStatus, isoToYmd, payDeadline, sendDeadline
-} from './util.js';
-import { state } from './store.js';
+import { icon } from './icons.js';
+// Dashboard: quadro de pendências, quadro de observações e checklist.
 import { api } from './api.js';
-import { renderVacationStatus, openVacation } from './vacations.js';
-import { edit as editNote } from './editor.js';
-import { icon, fillIcons } from './icons.js';
+import { state } from './store.js';
+import { diffDays, esc, fmtDay, isAdmission, isRescission, todayStr, validDay } from './util.js';
 
-const MODULES = { admissao:'Admissão', rescisao:'Rescisão', ferias:'Férias', geral:'Geral' };
-const BUCKETS = ['atrasadas','hoje','semana','futuras'];
-const FILTERS = { kpi: 'abertas', module: '', priority: '', status: '', view: 'cols' };
+const $ = (sel) => document.querySelector(sel);
 
-export function initDashboard() {
-  // filtros e visão
-  [['#pendFilterModule','module'],['#pendFilterPriority','priority'],['#pendFilterStatus','status']].forEach(([sel, key]) => {
-    const el = document.querySelector(sel); if (!el) return;
-    el.addEventListener('change', () => { FILTERS[key] = el.value; renderPendencias(); });
-  });
-  document.querySelector('#pendViewCols')?.addEventListener('click', () => setView('cols'));
-  document.querySelector('#pendViewList')?.addEventListener('click', () => setView('list'));
-  document.querySelectorAll('.kpi').forEach(btn => {
-    btn.addEventListener('click', () => {
-      FILTERS.kpi = btn.dataset.kpi || 'abertas';
-      syncKpiActive();
-      renderPendencias();
-      document.querySelector('.pend-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  });
-}
+let ctx = { toast: () => {}, navigate: () => {}, openNote: () => {} };
+let pendencias = [];
+let checklist = [];
+let showDone = false;
+let editingId = null;
+let boardSavedAt = null;
 
-function setView(v) {
-  FILTERS.view = v;
-  const cols = v === 'cols';
-  document.querySelector('#pendViewCols')?.classList.toggle('is-active', cols);
-  document.querySelector('#pendViewList')?.classList.toggle('is-active', !cols);
-  document.querySelector('#pendBoard')?.classList.toggle('is-hidden', !cols);
-  document.querySelector('#pendListView')?.toggleAttribute('hidden', cols);
-  renderPendencias();
-}
+const MODULE_LABEL = { admissao: 'Admissão', rescisao: 'Rescisão', ferias: 'Férias', geral: 'Geral' };
+const PRIORITY_LABEL = { alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+const PRIORITY_ORDER = { alta: 0, media: 1, baixa: 2 };
+const BUCKETS = ['hoje', 'semana', 'futuras'];
 
-function syncKpiActive() {
-  document.querySelectorAll('.kpi').forEach(b => b.classList.toggle('is-active', b.dataset.kpi === FILTERS.kpi));
-}
+const visible = () => { const v = $('#view-dashboard'); return !!v && !v.hidden; };
 
-function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-function daysBetween(a, b) { return Math.round((startOfDay(a) - startOfDay(b)) / 86400000); }
+// =====================================================================
+//  Pendências que nascem dos módulos (não precisam ser cadastradas de novo)
+// =====================================================================
+function autoItems(today) {
+  const list = [];
 
-function enrichItem(p) {
-  // devolve {item, bucket, situation, isLate, moduleLabel}
-  const due = parseYmd(p.dueDate);
-  const today = startOfDay(new Date());
-  let bucket = 'futuras', situation = 'aberta', isLate = false;
-  if (p.done) { situation = 'concluida'; bucket = 'futuras'; }
-  else if (due) {
-    const diff = daysBetween(due, today);
-    if (diff < 0) { bucket = 'atrasadas'; situation = 'atrasada'; isLate = true; }
-    else if (diff === 0) { bucket = 'hoje'; situation = 'hoje'; }
-    else if (diff <= 7) { bucket = 'semana'; situation = 'aberta'; }
-    else { bucket = 'futuras'; situation = 'aberta'; }
-  }
-  const moduleLabel = MODULES[p.module] || 'Geral';
-  return { item: p, bucket, situation, isLate, moduleLabel };
-}
-
-function buildAutoItems() {
-  const items = [];
-  const today = startOfDay(new Date());
-
-  (state.notes || []).filter(n => n.kind === 'rescisao').forEach(n => {
-    const st = rescissionStatus(n);
-    if (!st || st.key === 'done') return;
-    const d = st.deadline ? { done: false, text: st.message, employee: n.employee || n.title, module: 'rescisao', dueDate: st.deadline, priority: st.key === 'angry' ? 'alta' : 'media', source: 'auto', noteId: n.id, noteKind: 'rescisao' } : null;
-    if (d) items.push(d);
-  });
-
-  (state.notes || []).filter(n => n.kind === 'admissao' && !isComplete(n) && (n.employee || n.title)).forEach(n => {
-    const st = admissionStatus(n);
-    // admissão sem prazo crítico: entra como aberta; destaca se há prazo próximo via startDate? Mantemos simples: aberta/geral.
-    const due = n.startDate || '';
-    items.push({ done: false, text: 'Concluir checklist de admissão', employee: n.employee || n.title, module: 'admissao', dueDate: due, priority: 'media', source: 'auto', noteId: n.id, noteKind: 'admissao' });
-  });
-
-  (state.vacations || []).forEach(v => {
-    const st = renderVacationStatus(v);
-    if (!st || st.key === 'done' || st.key === 'gozo') return;
-    const pay = payDeadline(v.startDate);
-    const send = sendDeadline(v.startDate);
-    // escolher o mais urgente entre pagar/enviar
-    let due = '', text = 'Organizar férias', pri = 'media';
-    if (st.key === 'pay' || st.key === 'latepay') { due = pay; text = `Efetuar pagamento de férias`; pri = st.key === 'latepay' ? 'alta' : 'alta'; }
-    else if (st.key === 'send' || st.key === 'latesend') { due = send; text = `Enviar aviso de férias`; pri = st.key === 'latesend' ? 'alta' : 'media'; }
-    else if (st.key === 'plan' || st.key === 'nopay') { text = st.key === 'nopay' ? 'Registrar data de pagamento' : 'Planejar aviso/pagamento'; pri = st.key === 'nopay' ? 'alta' : 'baixa'; due = send || pay || ''; }
-    if (v.employee) items.push({ done: false, text, employee: v.employee, module: 'ferias', dueDate: due, priority: pri, source: 'auto', vacationId: v.id });
-  });
-  return items;
-}
-
-function getAllEnriched() {
-  const manual = (state.pendencias || []).map(p => ({ ...p, source: p.source || 'manual', module: p.module || 'geral' }));
-  const auto = buildAutoItems();
-  // enriquecer autos também
-  return [...manual, ...auto].map(enrichItem);
-}
-
-function matchesFilters(e) {
-  if (FILTERS.module && e.item.module !== FILTERS.module) return false;
-  if (FILTERS.priority && (e.item.priority || 'media') !== FILTERS.priority) return false;
-  if (FILTERS.status) {
-    if (FILTERS.status === 'abertas' && e.item.done) return false;
-    if (FILTERS.status === 'concluidas' && !e.item.done) return false;
-    if (FILTERS.status === 'atrasadas' && e.situation !== 'atrasada') return false;
-  }
-  // filtro rápido via KPI
-  const k = FILTERS.kpi;
-  if (k === 'abertas' && e.item.done) return false;
-  if (k === 'atrasadas' && e.situation !== 'atrasada') return false;
-  if (k === 'hoje' && e.situation !== 'hoje') return false;
-  if (k === 'concluidas' && !e.item.done) return false;
-  return true;
-}
-
-function renderKpis(all) {
-  const open = all.filter(e => !e.item.done).length;
-  const late = all.filter(e => e.situation === 'atrasada').length;
-  const today = all.filter(e => e.situation === 'hoje').length;
-  const done = all.filter(e => e.item.done).length;
-  const set = (id, v) => { const el = document.querySelector(id); if (el) el.textContent = v; };
-  set('#kpiAbertas', open); set('#kpiAtrasadas', late); set('#kpiHoje', today); set('#kpiConcluidas', done);
-  syncKpiActive();
-}
-
-function situationTag(e) {
-  const map = { atrasada:['sit-atrasada','Atrasada'], hoje:['sit-hoje','Hoje'], aberta:['sit-aberta','Aberta'], concluida:['sit-concluida','Concluída'] };
-  const m = map[e.situation] || map.aberta;
-  return `<span class="tag ${m[0]}">${m[1]}</span>`;
-}
-
-function openAction(e) {
-  const it = e.item;
-  if (it.noteId) { const n = (state.notes || []).find(x => String(x.id) === String(it.noteId)); if (n) return editNote(n); }
-  if (it.vacationId) return openVacation(it.vacationId);
-  if (it.module === 'ferias') { hideDrawer(); location.hash = '#ferias'; return; }
-  if (it.module === 'admissao') { hideDrawer(); location.hash = '#admissao'; return; }
-  if (it.module === 'rescisao') { hideDrawer(); location.hash = '#rescisao'; return; }
-}
-
-function renderPendencias() {
-  const board = document.querySelector('#pendBoard');
-  const listView = document.querySelector('#pendListView');
-  if (!board) return;
-  const all = getAllEnriched();
-  renderKpis(all);
-  const filtered = all.filter(matchesFilters);
-  // ordenar: atrasadas primeiro por data, depois por bucket natural
-  const bIndex = { atrasadas:0, hoje:1, semana:2, futuras:3 };
-  filtered.sort((a,b) => (bIndex[a.bucket]-bIndex[b.bucket] ? bIndex[a.bucket]-bIndex[b.bucket] : 0) || ((a.item.dueDate||'9999')>(b.item.dueDate||'9999')?1:-1));
-
-  if (FILTERS.view === 'list') {
-    board.classList.add('is-hidden'); listView.hidden = false;
-    listView.innerHTML = filtered.length ? filtered.map(e => rowHtml(e)).join('') : `<p class="pend-empty">Nenhuma atividade para os filtros selecionados.</p>`;
-  } else {
-    board.classList.remove('is-hidden'); listView.hidden = true;
-    BUCKETS.forEach(b => {
-      const list = board.querySelector(`.pend-list[data-bucket="${b}"]`);
-      const count = board.querySelector(`.pend-col[data-bucket="${b}"] .pill-count`);
-      if (!list) return;
-      const items = filtered.filter(e => e.bucket === b);
-      if (count) count.textContent = items.length || '';
-      const empty = { atrasadas:'Nenhuma atividade atrasada.', hoje:'Nada para hoje.', semana:'Nada para esta semana.', futuras:'Sem pendências futuras.' };
-      list.innerHTML = items.length ? items.map(e => cardHtml(e)).join('') : `<p class="pend-empty">${empty[b]}</p>`;
-    });
-  }
-  fillIcons(board);
-  fillIcons(listView);
-  bindPendActions(board);
-  bindPendActions(listView);
-  renderUpcoming(all);
-}
-
-function metaHtml(e) {
-  const it = e.item;
-  const late = e.isLate && !it.done;
-  return `<span class="tag module">${escapeHtml(e.moduleLabel)}</span>
-    <span class="tag ${it.priority || 'media'}">${it.priority || 'média'}</span>
-    ${situationTag(e)}
-    ${it.dueDate ? `<span class="tag prazo${late?' late':''}">${late?'Venceu ':'Prazo '}${formatDate(it.dueDate)}</span>` : ''}
-    ${it.source === 'auto' ? `<span class="tag auto">automática</span>` : ''}`;
-}
-
-function cardHtml(e) {
-  const it = e.item;
-  const done = !!it.done;
-  return `<div class="pend-item ${done?'done':''} ${e.isLate&&!done?'is-late':''} pri-${it.priority||'media'}" data-eid="${escapeHtml(String(it.id||''))}" data-source="${it.source}" data-note="${it.noteId||''}" data-vac="${it.vacationId||''}">
-    <input type="checkbox" data-act="toggle" ${done?'checked':''} ${it.source==='auto'?'disabled title="Atividade automática — conclua no módulo de origem"':''} aria-label="Concluir" />
-    <div>
-      <strong>${escapeHtml(it.text || 'Atividade')}</strong>
-      ${it.employee ? `<small>${escapeHtml(it.employee)}</small>` : ''}
-      <div class="pend-meta">${metaHtml(e)}</div>
-    </div>
-    <div class="pend-actions">
-      <button type="button" class="icon-btn" data-act="open" title="Abrir processo" aria-label="Abrir">${icon('external-link', { size: 14 })}</button>
-      ${it.source!=='auto' ? `<button type="button" class="icon-btn" data-act="del" title="Excluir" aria-label="Excluir">${icon('trash-2', { size: 14 })}</button>` : ''}
-    </div>
-  </div>`;
-}
-
-function rowHtml(e) {
-  const it = e.item;
-  const done = !!it.done;
-  return `<div class="pend-row ${done?'done':''} ${e.isLate&&!done?'is-late':''}" data-eid="${escapeHtml(String(it.id||''))}" data-source="${it.source}" data-note="${it.noteId||''}" data-vac="${it.vacationId||''}">
-    <input type="checkbox" data-act="toggle" ${done?'checked':''} ${it.source==='auto'?'disabled':''} aria-label="Concluir" />
-    <div class="pr-main"><strong>${escapeHtml(it.text||'Atividade')}</strong>${it.employee?`<small>${escapeHtml(it.employee)}</small>`:''}</div>
-    <div class="pr-col">${escapeHtml(e.moduleLabel)}</div>
-    <div class="pr-col">${it.dueDate ? formatDate(it.dueDate) : '<span class="muted">—</span>'}</div>
-    <div class="pr-col"><span class="tag ${it.priority||'media'}">${it.priority||'média'}</span> ${situationTag(e)}</div>
-    <div class="pend-actions">
-      <button type="button" class="icon-btn" data-act="open" title="Abrir">${icon('external-link',{size:14})}</button>
-      ${it.source!=='auto'?`<button type="button" class="icon-btn" data-act="del" title="Excluir">${icon('trash-2',{size:14})}</button>`:''}
-    </div>
-  </div>`;
-}
-
-function bindPendActions(root) {
-  if (!root || root._boundPend) return; root._boundPend = true;
-  root.addEventListener('click', async (ev) => {
-    const btn = ev.target.closest('[data-act]');
-    if (!btn) return;
-    const row = btn.closest('[data-eid],[data-note],[data-vac]');
-    if (!row) return;
-    const act = btn.dataset.act;
-    const source = row.dataset.source;
-    const id = row.dataset.eid;
-    const noteId = row.dataset.note;
-    const vacId = row.dataset.vac;
-    if (act === 'open') {
-      if (noteId) { const n = (state.notes||[]).find(x => String(x.id)===String(noteId)); if (n) return editNote(n); }
-      if (vacId) return openVacation(vacId);
-      const p = (state.pendencias||[]).find(x => String(x.id)===String(id));
-      if (p) return openAction({ item: p });
+  for (const n of state.notes) {
+    if (isRescission(n)) {
+      const open = n.tasks.some((t) => !t.done);
+      const due = n.send_limit || n.pay_limit;
+      if (!open || !validDay(due)) continue;
+      list.push({
+        id: `auto:${n.id}`,
+        auto: true,
+        noteId: n.id,
+        title: `Terminar ${n.title}`,
+        description: 'Checklist da rescisão ainda tem itens em aberto.',
+        due_date: due,
+        priority: 'alta',
+        module: 'rescisao',
+      });
+    } else if (isAdmission(n)) {
+      const open = n.tasks.some((t) => !t.done);
+      if (!open || !validDay(n.admission_date)) continue;
+      list.push({
+        id: `auto:${n.id}`,
+        auto: true,
+        noteId: n.id,
+        title: `Finalizar documentação — ${n.employee_name || n.title}`,
+        description: 'Admissão com checklist em aberto.',
+        due_date: n.admission_date,
+        priority: 'alta',
+        module: 'admissao',
+      });
     }
-    if (source === 'auto') return;
-    if (act === 'del') { await api.deletePendencia(id); renderPendencias(); }
-  });
-  root.addEventListener('change', async (ev) => {
-    const cb = ev.target.closest('input[data-act="toggle"]'); if (!cb) return;
-    const row = cb.closest('[data-eid]'); if (!row || row.dataset.source === 'auto') return;
-    const p = (state.pendencias||[]).find(x => String(x.id)===String(row.dataset.eid));
-    if (!p) return;
-    p.done = cb.checked; await api.savePendencia(p); renderPendencias();
-  });
+  }
+
+  for (const v of state.vacations || []) {
+    if (!validDay(v.start_date)) continue;
+    if (validDay(v.end_date) && v.end_date < today) continue; // férias já passaram
+    list.push({
+      id: `auto:vac:${v.id}`,
+      auto: true,
+      title: `Conferir férias de ${v.employee_name || 'colaborador'}`,
+      description: v.company ? `Início das férias · ${v.company}` : 'Início das férias',
+      due_date: v.start_date,
+      priority: 'media',
+      module: 'ferias',
+    });
+  }
+
+  return list;
 }
 
-function renderUpcoming(all) {
-  const box = document.querySelector('#upcomingList'); if (!box) return;
-  const items = [];
-  const today = startOfDay(new Date());
-  (state.events || []).forEach(ev => { if (ev.date) items.push({ date: ev.date, text: ev.text || 'Evento', sub: 'Calendário' }); });
-  (state.vacations || []).forEach(v => {
-    if (v.startDate) items.push({ date: isoToYmd(v.startDate) || v.startDate, text: `Início de férias — ${v.employee||''}`, sub: 'Férias' });
-    const pay = payDeadline(v.startDate); if (pay) items.push({ date: pay, text: `Pagar férias — ${v.employee||''}`, sub: 'Férias' });
-  });
-  all.filter(e => !e.item.done && e.item.dueDate).forEach(e => items.push({ date: e.item.dueDate, text: e.item.text, sub: e.moduleLabel, late: e.isLate }));
-  const future = items.map(it => ({ ...it, d: parseYmd(it.date) })).filter(it => it.d && daysBetween(it.d, today) >= -1).sort((a,b)=>a.d-b.d).slice(0,6);
-  if (!future.length) { box.innerHTML = `<p class="pend-empty">Nenhum compromisso próximo.</p>`; return; }
-  box.innerHTML = future.map(it => {
-    const late = daysBetween(it.d, today) < 0;
-    return `<div class="up-item ${late?'is-late':''}"><span class="up-day">${formatDate(it.date).replace(/\//g,'/').slice(0,5)}</span><div><strong>${escapeHtml(it.text)}</strong><small>${escapeHtml(it.sub)}${late?' · atrasado':''}</small></div></div>`;
-  }).join('');
+function bucketOf(p, today) {
+  if (!validDay(p.due_date)) return 'futuras';
+  const d = diffDays(p.due_date, today);
+  if (d <= 0) return 'hoje'; // atrasadas também aparecem em "para hoje"
+  if (d <= 7) return 'semana';
+  return 'futuras';
 }
 
-export async function addPendencia(data) {
-  const p = {
-    id: crypto.randomUUID(), source: 'manual', done: false,
-    text: data.text, employee: data.employee || '', module: data.module || 'geral',
-    dueDate: data.dueDate || '', priority: data.priority || 'media'
+function dueLabel(p, today) {
+  if (!validDay(p.due_date)) return 'sem data';
+  const d = diffDays(p.due_date, today);
+  if (d === 0) return 'hoje';
+  if (d === 1) return 'amanhã';
+  if (d < 0) return `${-d} dia${d === -1 ? '' : 's'} de atraso`;
+  if (d <= 7) return `em ${d} dias`;
+  return fmtDay(p.due_date);
+}
+
+const isLate = (p, today) => validDay(p.due_date) && p.due_date < today;
+
+// =====================================================================
+//  Desenho do quadro
+// =====================================================================
+function renderBoard() {
+  const today = todayStr();
+  const everything = [...autoItems(today), ...pendencias]
+    .filter((p) => showDone || !p.done)
+    .sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1)
+      || String(a.due_date || '9999').localeCompare(String(b.due_date || '9999')));
+
+  for (const bucket of BUCKETS) {
+    const column = document.querySelector(`.pend-col[data-bucket="${bucket}"]`);
+    if (!column) continue;
+    const list = column.querySelector('.pend-list');
+    const count = column.querySelector('.pill-count');
+    const items = everything.filter((p) => bucketOf(p, today) === bucket);
+    if (count) count.textContent = items.length ? String(items.length) : '';
+
+    if (!items.length) {
+      list.innerHTML = '<p class="pend-empty">Nada por aqui. 🌸</p>';
+      continue;
+    }
+
+    list.innerHTML = items.map((p) => {
+      const late = !p.auto && isLate(p, today);
+      return `
+      <div class="pend-item${p.done ? ' done' : ''}${late ? ' late' : ''}" data-id="${esc(p.id)}">
+        <input type="checkbox" ${p.done ? 'checked' : ''} ${p.auto ? 'disabled title="Conclua no módulo de origem"' : ''}
+               aria-label="Concluir ${esc(p.title)}">
+        <div>
+          <strong>${esc(p.title)}</strong>
+          ${p.description ? `<small>${esc(p.description)}</small>` : ''}
+          <div class="pend-tags">
+            <span class="tag ${p.priority}">${PRIORITY_LABEL[p.priority] ?? 'Média'}</span>
+            <span class="tag">${MODULE_LABEL[p.module] ?? 'Geral'}</span>
+            <span class="tag${late ? ' late' : ''}">${esc(dueLabel(p, today))}</span>
+            ${p.auto ? '<span class="tag auto">automática</span>' : ''}
+          </div>
+        </div>
+        <div class="pend-actions">
+          ${p.auto
+            ? '<button type="button" class="icon-btn" data-open title="Abrir o módulo">abrir</button>'
+            : '<button type="button" class="icon-btn" data-edit title="Editar">' + icon('pencil', { size: 15 }) + '</button>'
+              + '<button type="button" class="icon-btn" data-del title="Excluir">' + icon('trash-2', { size: 15 }) + '</button>'}
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// =====================================================================
+//  API
+// =====================================================================
+async function loadPendencias() {
+  try {
+    pendencias = await api.listPendencias();
+    renderBoard();
+  } catch (err) { ctx.toast(err.message); }
+}
+
+async function loadChecklist() {
+  try {
+    checklist = await api.listChecklist();
+    renderChecklist();
+  } catch (err) { ctx.toast(err.message); }
+}
+
+async function loadPanel() {
+  try {
+    const panel = await api.getPanel();
+    const board = $('#board');
+    if (board && board.value !== panel.board) board.value = panel.board;
+    document.dispatchEvent(new CustomEvent('panel:loaded', { detail: panel }));
+  } catch (err) { ctx.toast(err.message); }
+}
+
+// =====================================================================
+//  Checklist
+// =====================================================================
+function renderChecklist() {
+  const root = $('#checkList');
+  if (!root) return;
+  if (!checklist.length) {
+    root.innerHTML = '<li class="empty">Seu checklist está vazio. Adicione o primeiro item acima.</li>';
+    return;
+  }
+  root.innerHTML = checklist.map((item) => `
+    <li class="${item.done ? 'done' : ''}" data-id="${item.id}">
+      <input type="checkbox" ${item.done ? 'checked' : ''} aria-label="Concluir ${esc(item.text)}">
+      <input class="ci-text" type="text" value="${esc(item.text)}" maxlength="500" aria-label="Item do checklist">
+      <button type="button" class="icon-btn" data-del title="Excluir item">${icon('trash-2', { size: 15 })}</button>
+    </li>`).join('');
+}
+
+function wireChecklist() {
+  $('#checkForm').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const input = $('#checkInput');
+    const text = input.value.trim();
+    if (!text) return;
+    try {
+      const item = await api.addCheckItem(text);
+      checklist.push(item);
+      input.value = '';
+      input.focus();
+      renderChecklist();
+    } catch (err) { ctx.toast(err.message); }
   };
-  await api.savePendencia(p);
-  renderPendencias();
+
+  $('#checkList').onchange = async (ev) => {
+    const box = ev.target.closest('input[type="checkbox"]');
+    if (!box) return;
+    const li = box.closest('li');
+    const item = checklist.find((x) => x.id === li.dataset.id);
+    if (!item) return;
+    item.done = box.checked;
+    li.classList.toggle('done', item.done);
+    try {
+      await api.updateCheckItem(item.id, { text: '', done: item.done });
+      $('#checkStatus').textContent = item.done ? 'Item concluído 💗' : '';
+    } catch (err) { ctx.toast(err.message); }
+  };
+  $('#checkList').onclick = async (ev) => {
+    const del = ev.target.closest('[data-del]');
+    if (!del) return;
+    const li = del.closest('li');
+    if (!window.confirm('Excluir este item do checklist?')) return;
+    try {
+      await api.deleteCheckItem(li.dataset.id);
+      checklist = checklist.filter((x) => x.id !== li.dataset.id);
+      renderChecklist();
+    } catch (err) { ctx.toast(err.message); }
+  };
+  // Editar o texto: salva ao sair do campo ou apertar Enter
+  $('#checkList').addEventListener('focusout', async (ev) => {
+    const input = ev.target.closest?.('.ci-text');
+    if (!input) return;
+    const li = input.closest('li');
+    const item = checklist.find((x) => x.id === li.dataset.id);
+    if (!item) return;
+    const text = input.value.trim();
+    if (!text || text === item.text) { input.value = item.text; return; }
+    item.text = text;
+    try {
+      await api.updateCheckItem(item.id, { text, done: item.done });
+    } catch (err) { ctx.toast(err.message); }
+  });
+  $('#checkList').addEventListener('keydown', (ev) => {
+    if (ev.target.closest?.('.ci-text') && ev.key === 'Enter') { ev.preventDefault(); ev.target.blur(); }
+  });
 }
 
-// refresh geral chamado pelo app
-export function refreshDashboard() { renderPendencias(); }
+// =====================================================================
+//  Quadro de observações
+// =====================================================================
+function wireBoard() {
+  const board = $('#board');
+  let timer;
+  board.oninput = () => {
+    $('#boardStatus').textContent = 'Salvando...';
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      try {
+        await api.setPanelPart('board', board.value);
+        boardSavedAt = new Date();
+        $('#boardStatus').textContent = `Salvo às ${boardSavedAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      } catch (err) {
+        $('#boardStatus').textContent = 'Não foi possível salvar.';
+        ctx.toast(err.message);
+      }
+    }, 700);
+  };
+  $('#clearBoard').onclick = async () => {
+    if (!board.value.trim() || !window.confirm('Limpar o quadro de observações?')) return;
+    board.value = '';
+    try {
+      await api.setPanelPart('board', '');
+      $('#boardStatus').textContent = 'Quadro limpo.';
+    } catch (err) { ctx.toast(err.message); }
+  };
+}
+
+// =====================================================================
+//  Formulário de pendências
+// =====================================================================
+function openForm(item = null) {
+  editingId = item?.id ?? null;
+  $('#pendId').value = editingId ?? '';
+  $('#pendTitle').value = item?.title ?? '';
+  $('#pendDesc').value = item?.description ?? '';
+  $('#pendDue').value = item?.due_date ?? '';
+  $('#pendPriority').value = item?.priority ?? 'media';
+  $('#pendModule').value = item?.module ?? 'geral';
+  $('#pendForm').hidden = false;
+  $('#togglePendForm').hidden = true;
+  $('#pendTitle').focus();
+}
+
+function closeForm() {
+  editingId = null;
+  $('#pendForm').hidden = true;
+  $('#togglePendForm').hidden = false;
+  $('#pendForm').reset();
+  $('#pendId').value = '';
+}
+
+function wirePendencias() {
+  $('#togglePendForm').onclick = () => openForm();
+  $('#cancelPend').onclick = closeForm;
+  $('#toggleDonePend').onclick = () => {
+    showDone = !showDone;
+    $('#toggleDonePend').textContent = showDone ? 'Esconder concluídas' : 'Mostrar concluídas';
+    renderBoard();
+  };
+
+  $('#pendForm').onsubmit = async (ev) => {
+    ev.preventDefault();
+    const data = {
+      title: $('#pendTitle').value.trim(),
+      description: $('#pendDesc').value.trim(),
+      due_date: $('#pendDue').value || null,
+      priority: $('#pendPriority').value,
+      module: $('#pendModule').value,
+    };
+    if (!data.title) return;
+    try {
+      if (editingId) {
+        const updated = await api.updatePendencia(editingId, { ...data, done: pendencias.find((p) => p.id === editingId)?.done ?? false });
+        pendencias = pendencias.map((p) => (p.id === editingId ? updated : p));
+        ctx.toast('Pendência atualizada.');
+      } else {
+        const created = await api.createPendencia(data);
+        pendencias.push(created);
+        ctx.toast('Pendência adicionada.');
+      }
+      closeForm();
+      renderBoard();
+    } catch (err) { ctx.toast(err.message); }
+  };
+
+  $('.pend-board').addEventListener('change', async (ev) => {
+    const box = ev.target.closest('input[type="checkbox"]');
+    if (!box) return;
+    const id = box.closest('.pend-item')?.dataset.id;
+    const item = pendencias.find((p) => p.id === id);
+    if (!item) return;
+    try {
+      const updated = await api.setPendenciaDone(id, box.checked);
+      pendencias = pendencias.map((p) => (p.id === id ? updated : p));
+      renderBoard();
+      if (box.checked) ctx.toast('Pendência concluída! 💗');
+    } catch (err) { ctx.toast(err.message); }
+  });
+
+  $('.pend-board').addEventListener('click', async (ev) => {
+    const row = ev.target.closest('.pend-item');
+    if (!row) return;
+    const id = row.dataset.id;
+    const manual = pendencias.find((p) => p.id === id);
+    const auto = !manual;
+
+    if (ev.target.closest('[data-open]')) {
+      const module = (auto ? autoItems(todayStr()).find((p) => p.id === id)?.module : manual.module) || 'dashboard';
+      ctx.navigate(['admissao', 'rescisao', 'ferias'].includes(module) ? module : 'dashboard');
+      if (auto) {
+        const noteId = autoItems(todayStr()).find((p) => p.id === id)?.noteId;
+        if (noteId) setTimeout(() => ctx.openNote(noteId), 60);
+      }
+      return;
+    }
+    if (!manual) return;
+
+    if (ev.target.closest('[data-edit]')) { openForm(manual); return; }
+    if (ev.target.closest('[data-del]')) {
+      if (!window.confirm(`Excluir a pendência "${manual.title}"?`)) return;
+      try {
+        await api.deletePendencia(id);
+        pendencias = pendencias.filter((p) => p.id !== id);
+        renderBoard();
+      } catch (err) { ctx.toast(err.message); }
+    }
+  });
+}
+
+// =====================================================================
+//  Início
+// =====================================================================
+function renderAll() {
+  renderBoard();
+  if (!checklist.length) renderChecklist();
+}
+
+export function initDashboard(options) {
+  ctx = { ...ctx, ...options };
+  wirePendencias();
+  wireChecklist();
+  wireBoard();
+  loadPanel();
+  loadChecklist();
+  loadPendencias();
+}
+
+export function refreshDashboard() {
+  if (!visible()) return;
+  renderBoard();
+  loadPendencias();
+}

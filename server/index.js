@@ -880,25 +880,10 @@ app.use((err, _req, res, _next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-
-// Sobe o servidor primeiro: assim a interface continua acessível mesmo se o
-// banco estiver hibernando (Neon/Render) ou momentaneamente fora do ar.
-app.listen(PORT, () => console.log(`🌸 Notas rodando em http://localhost:${PORT}`));
-
-// Reconecta em segundo plano, com espera crescente e sem limite de tentativas:
-// quando o banco volta, o app se recupera sozinho, sem precisar de novo deploy.
-(async () => {
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      await initDb();
-      console.log('✅ Postgres conectado e tabelas conferidas.');
-      return;
-    } catch (err) {
-      const wait = Math.min(30000, 2000 * attempt);
-      console.error(`Postgres indisponível (tentativa ${attempt}): ${err.message}`);
-      console.error('Confira o DATABASE_URL e se o banco está ligado. Nova tentativa em ' +
-        `${Math.round(wait / 1000)}s.`);
-      await new Promise((resolve) => setTimeout(resolve, wait));
-    }
-  }
-})();
+initDb()
+  .then(() => app.listen(PORT, () => console.log(`🌸 Notas rodando em http://localhost:${PORT}`)))
+  .catch((err) => {
+    console.error('Não foi possível conectar ao Postgres:', err.message);
+    console.error('Confira o DATABASE_URL no arquivo .env e se o banco está ligado.');
+    process.exit(1);
+  });
