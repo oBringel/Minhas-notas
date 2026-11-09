@@ -21,7 +21,7 @@ import {
 import {
   esc, fmtDateTime, isAdmission, isRescission, noteFace, noteMatches, noteSubtitle, showToast,
 } from './util.js?v=4';
-import { initDashboard, refreshDashboard, addPendencia } from './dashboard.js?v=4';
+import { initDashboard, refreshDashboard } from './dashboard.js?v=5';
 import { initFiles, refreshFiles } from './files.js';
 import { initCalendar, refreshCalendar } from './calendar.js';
 import { initVacations, refreshVacations } from './vacations.js';
@@ -334,23 +334,8 @@ window.addEventListener('pagehide', () => { flushPending(); });
 
 decorateHero();
 initScore({ toast });
-initDashboard({ toast, navigate: go, openNote });
-  initSidebar();
-  // pendências (form do dashboard)
-  document.querySelector('#pendForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const text = document.querySelector('#pendText')?.value.trim();
-    if (!text) return;
-    await addPendencia({
-      text,
-      employee: document.querySelector('#pendEmployee')?.value.trim() || '',
-      dueDate: document.querySelector('#pendDue')?.value || '',
-      priority: document.querySelector('#pendPriority')?.value || 'media',
-      module: 'geral'
-    });
-    e.target.reset();
-    if (typeof toast === 'function') toast('Pendência adicionada.');
-  });
+initDashboard({ toast, navigate: go, openNote, closeDrawer: closeEditor });
+initSidebar();
 
 initFiles({ toast });
 initCalendar({ toast });
