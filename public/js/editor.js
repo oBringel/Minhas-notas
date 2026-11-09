@@ -1,9 +1,13 @@
-// Editor de nota/admissão. Usado na página e também na janelinha flutuante:
+// Editor de nota, admissão e rescisão. Usado na página e também na janelinha flutuante:
 // ele só mexe dentro do elemento (root) que recebe.
 import {
-  addTask, notify, removeNote, removeTask, saveNow, scheduleSave, setBenefit, subscribe, toggleTask,
+  addTask, notify, removeNote, removeTask, saveNow, scheduleSave, setBenefit, setRescissionType,
+  subscribe, toggleTask,
 } from './store.js';
-import { admissionTitle, esc, fmtDateTime, isAdmission, showToast } from './util.js';
+import {
+  RESCISSION_TYPES, admissionTitle, beforeLastDay, esc, fmtDateTime, happyFace, isAdmission,
+  isRescission, payDeadline, rescissionStatus, rescissionTitle, sendDeadline, showToast, validDay,
+} from './util.js';
 
 const LOCK_ICON = `<span class="lock" title="Item fixo, não pode ser removido">
   <svg viewBox="0 0 16 16" width="14" height="14" role="img" aria-label="Item fixo">
@@ -78,17 +82,60 @@ export function mountEditor(root, n, opts = {}) {
       ${benefitHTML('vr', 'Tem VR?', n.has_vr, n.event_vr)}
     </fieldset>`;
 
+  // O bloco do topo só gruda na janelinha flutuante (regras em pip.css); na web rola normal.
+  const rescissionHeadHTML = () => `
+    <div class="editor-top">
+      <div class="editor-head">
+        <h2 class="note-title" id="heading">${esc(n.title)}</h2>
+        ${headButtons()}
+      </div>
+      <div class="meta" id="status">Atualizada em ${fmtDateTime(n.updated_at)}</div>
+    </div>
+    <div class="status-banner" id="statusBanner" hidden></div>
+    <div class="fields">
+      <label class="field"><span>Empresa</span>
+        <input id="company" type="text" value="${esc(n.company)}" autocomplete="off"></label>
+      <label class="field"><span>Colaborador</span>
+        <input id="employee" type="text" value="${esc(n.employee_name)}" autocomplete="off"></label>
+      <label class="field"><span>Tipo de rescisão</span>
+        <select id="rType">
+          <option value="">Selecione o tipo</option>
+          ${RESCISSION_TYPES.map((t) =>
+            `<option value="${t.value}" ${n.rescission_type === t.value ? 'selected' : ''}>${esc(t.label)}</option>`).join('')}
+        </select></label>
+    </div>
+    <div class="fields">
+      <label class="field"><span>Último dia trabalhado</span>
+        <input id="lastDay" type="date" value="${esc(n.last_day || '')}"></label>
+      <label class="field"><span>Dia limite de pagamento</span>
+        <input id="payLimit" type="date" value="${esc(n.pay_limit || '')}"></label>
+      <label class="field"><span>Dia limite para enviar a prévia</span>
+        <input id="sendLimit" type="date" value="${esc(n.send_limit || '')}"></label>
+    </div>`;
+
   const checklistHTML = () => `
     <div class="checklist-title"><strong>Checklist</strong><span class="meta" id="count"></span></div>
     <div class="progress"><div id="bar"></div></div>
     <div class="items" id="items"></div>
     <form class="add-task" id="addForm">
       <input id="taskText" type="text" aria-label="Novo item" autocomplete="off"
-             placeholder="${isAdmission(n) ? 'Adicionar item extra...' : 'Adicionar item ao checklist...'}">
+             placeholder="${isAdmission(n) || isRescission(n) ? 'Adicionar item extra...' : 'Adicionar item ao checklist...'}">
       <button type="submit">Adicionar</button>
     </form>
     <p class="foot">Dica: marque um item concluído e veja as flores desabrocharem.</p>
     <div class="editor-actions"><button class="save-btn" type="button">Salvar</button></div>`;
+
+  // ---------- Faixa de situação da rescisão (carinha e cor) ----------
+  function updateBanner() {
+    if (!isRescission(n)) return;
+    const el = $('#statusBanner');
+    if (!el) return;
+    const s = rescissionStatus(n);
+    if (s.key === 'none') { el.hidden = true; return; }
+    el.hidden = false;
+    el.className = `status-banner status-${s.key}`;
+    el.innerHTML = `<span class="status-emoji" aria-hidden="true">${s.emoji}</span><strong>${esc(s.label)}</strong>`;
+  }
 
   // ---------- Checklist ----------
   function updateProgress() {
@@ -98,21 +145,26 @@ export function mountEditor(root, n, opts = {}) {
     if (count) count.textContent = `${done}/${total} concluídos`;
     const bar = $('#bar');
     if (bar) bar.style.width = `${total ? (done / total) * 100 : 0}%`;
+    updateBanner();
   }
 
   function taskRow(t) {
+    const isFinal = t.key === 'r:final';
     const row = doc.createElement('div');
     row.className = 'task' + (t.done ? ' done' : '') + (t.locked ? ' locked' : '');
     row.innerHTML = `
       <input type="checkbox" ${t.done ? 'checked' : ''} aria-label="Concluir item">
       <span>${esc(t.text)}</span>
+      ${isFinal ? `<span class="final-face" aria-hidden="true" ${t.done ? '' : 'hidden'}>${happyFace(t.id)}</span>` : ''}
       ${t.locked ? LOCK_ICON
         : '<button class="remove" type="button" title="Remover item" aria-label="Remover item">×</button>'}`;
 
     const box = row.querySelector('input');
+    const face = row.querySelector('.final-face');
     box.onchange = () => {
       const done = box.checked;
       row.classList.toggle('done', done);
+      if (face) face.hidden = !done;
       const request = toggleTask(n, t, done, box, self); // a parte rápida já roda aqui
       updateProgress();
       request.catch((err) => toast(err.message)); // se falhar, a store desfaz e redesenha
@@ -130,48 +182,159 @@ export function mountEditor(root, n, opts = {}) {
     return row;
   }
 
+  // ---------- Campos de cada tipo ----------
+  function bindAdmission() {
+    const bind = (selector, field) => {
+      const input = $(selector);
+      input.oninput = () => {
+        n[field] = input.value;
+        if (field === 'employee_name') {
+          n.title = admissionTitle(n);
+          $('#heading').textContent = n.title;
+        }
+        edited();
+        notify('list');
+      };
+    };
+    bind('#employee', 'employee_name');
+    bind('#company', 'company');
+    bind('#admDate', 'admission_date');
+
+    // Tem VT? / Tem VR?  (com a linha para escrever o evento)
+    [['vt', 'has_vt', 'event_vt'], ['vr', 'has_vr', 'event_vr']].forEach(([key, field, eventField]) => {
+      const eventInput = $(`#event-${key}`);
+      if (eventInput) {
+        eventInput.oninput = () => { n[eventField] = eventInput.value; edited(); notify('list'); };
+      }
+      root.querySelectorAll(`input[name="${key}"]`).forEach((radio) => {
+        radio.onchange = async () => {
+          try { await setBenefit(n, key, radio.value === 'sim', self); }
+          catch (err) { toast(err.message); }
+          render();
+          // Ao marcar Sim, o cursor já vai para a linha do evento
+          const next = n[field] ? $(`#event-${key}`) : $(`input[name="${key}"]:checked`);
+          if (next) next.focus();
+        };
+      });
+    });
+  }
+
+  function bindRescission() {
+    const changed = () => { edited(); notify('list'); updateBanner(); };
+
+    // Empresa e colaborador: o título é "Rescisão" + 1º nome de cada
+    const text = (selector, field) => {
+      const input = $(selector);
+      input.oninput = () => {
+        n[field] = input.value;
+        n.title = rescissionTitle(n);
+        $('#heading').textContent = n.title;
+        changed();
+      };
+    };
+    text('#company', 'company');
+    text('#employee', 'employee_name');
+
+    // Tipo de rescisão: troca os itens do meio do checklist
+    const select = $('#rType');
+    select.onchange = async () => {
+      try { await setRescissionType(n, select.value, self); }
+      catch (err) { toast(err.message); }
+      render();
+      $('#rType')?.focus();
+    };
+
+    const lastDay = $('#lastDay');
+    const payInput = $('#payLimit');
+    const sendInput = $('#sendLimit');
+
+    // Pagamento e envio nunca podem ficar antes do último dia trabalhado: não dá para pagar
+    // antes de a pessoa sair. Se veio alguma data errada salva, o campo se acerta aqui.
+    const syncMins = () => {
+      const min = validDay(n.last_day) ? n.last_day : '';
+      payInput.min = min;
+      sendInput.min = min;
+    };
+    let fixed = false;
+    if (validDay(n.last_day)) {
+      if (beforeLastDay(n.pay_limit, n.last_day)) {
+        n.pay_limit = payDeadline(n.last_day);
+        fixed = true;
+      }
+      if (beforeLastDay(n.send_limit, n.last_day)) {
+        n.send_limit = validDay(n.pay_limit) ? sendDeadline(n.pay_limit, n.last_day) : null;
+        fixed = true;
+      }
+      payInput.value = n.pay_limit || '';
+      sendInput.value = n.send_limit || '';
+    }
+    syncMins();
+    if (fixed) changed();
+
+    // Último dia trabalhado: preenche sozinho o limite de pagamento (+10 dias) e o limite
+    // para enviar a prévia (-5 dias), antecipando quando cai no fim de semana — a não ser
+    // que ela já tenha escrito outra data nesses campos.
+    lastDay.oninput = () => {
+      const previous = validDay(n.last_day) ? n.last_day : null;
+      n.last_day = lastDay.value || null;
+      if (validDay(n.last_day)) {
+        const autoPay = previous ? payDeadline(previous) : null;
+        const autoSend = previous ? sendDeadline(payDeadline(previous), previous) : null;
+        if (!n.pay_limit || n.pay_limit === autoPay || beforeLastDay(n.pay_limit, n.last_day)) {
+          n.pay_limit = payDeadline(n.last_day);
+          payInput.value = n.pay_limit;
+        }
+        if (!n.send_limit || n.send_limit === autoSend || beforeLastDay(n.send_limit, n.last_day)) {
+          n.send_limit = sendDeadline(n.pay_limit, n.last_day);
+          sendInput.value = n.send_limit;
+        }
+      }
+      syncMins();
+      changed();
+    };
+
+    // Mudou o limite de pagamento à mão? O limite de envio acompanha, se ainda era automático.
+    payInput.oninput = () => {
+      const autoSend = validDay(n.pay_limit) ? sendDeadline(n.pay_limit, n.last_day) : null;
+      let value = payInput.value || null;
+      if (beforeLastDay(value, n.last_day)) {
+        value = n.last_day; // nunca antes de sair
+        payInput.value = value;
+        toast('O pagamento não pode ser antes do último dia trabalhado.');
+      }
+      n.pay_limit = value;
+      if (validDay(n.pay_limit)
+        && (!n.send_limit || n.send_limit === autoSend || beforeLastDay(n.send_limit, n.last_day))) {
+        n.send_limit = sendDeadline(n.pay_limit, n.last_day);
+        sendInput.value = n.send_limit;
+      }
+      changed();
+    };
+
+    sendInput.oninput = () => {
+      let value = sendInput.value || null;
+      if (beforeLastDay(value, n.last_day)) {
+        value = n.last_day; // nunca antes de sair
+        sendInput.value = value;
+        toast('O envio não pode ser antes do último dia trabalhado.');
+      }
+      n.send_limit = value;
+      changed();
+    };
+  }
+
   // ---------- Montagem ----------
   function render() {
-    root.innerHTML = (isAdmission(n) ? admissionHeadHTML() : noteHeadHTML()) + checklistHTML();
+    const head = isRescission(n) ? rescissionHeadHTML()
+      : isAdmission(n) ? admissionHeadHTML() : noteHeadHTML();
+    root.innerHTML = head + checklistHTML();
 
     const body = $('#bodyText');
-    body.oninput = () => { n.body = body.value; edited(); };
+    if (body) body.oninput = () => { n.body = body.value; edited(); };
 
-    if (isAdmission(n)) {
-      const bind = (selector, field) => {
-        const input = $(selector);
-        input.oninput = () => {
-          n[field] = input.value;
-          if (field === 'employee_name') {
-            n.title = admissionTitle(n);
-            $('#heading').textContent = n.title;
-          }
-          edited();
-          notify('list');
-        };
-      };
-      bind('#employee', 'employee_name');
-      bind('#company', 'company');
-      bind('#admDate', 'admission_date');
-
-      // Tem VT? / Tem VR?  (com a linha para escrever o evento)
-      [['vt', 'has_vt', 'event_vt'], ['vr', 'has_vr', 'event_vr']].forEach(([key, field, eventField]) => {
-        const eventInput = $(`#event-${key}`);
-        if (eventInput) {
-          eventInput.oninput = () => { n[eventField] = eventInput.value; edited(); notify('list'); };
-        }
-        root.querySelectorAll(`input[name="${key}"]`).forEach((radio) => {
-          radio.onchange = async () => {
-            try { await setBenefit(n, key, radio.value === 'sim', self); }
-            catch (err) { toast(err.message); }
-            render();
-            // Ao marcar Sim, o cursor já vai para a linha do evento
-            const next = n[field] ? $(`#event-${key}`) : $(`input[name="${key}"]:checked`);
-            if (next) next.focus();
-          };
-        });
-      });
-    } else {
+    if (isRescission(n)) bindRescission();
+    else if (isAdmission(n)) bindAdmission();
+    else {
       const title = $('#title');
       title.oninput = () => { n.title = title.value; edited(); notify('list'); };
     }
@@ -193,10 +356,12 @@ export function mountEditor(root, n, opts = {}) {
     // Excluir
     const del = $('#delete');
     if (del) {
+      const what = isRescission(n) ? 'esta rescisão' : isAdmission(n) ? 'esta admissão' : 'esta nota';
       del.onclick = async () => {
-        if (!win.confirm(`Excluir ${isAdmission(n) ? 'esta admissão' : 'esta nota'} e seu checklist?`)) return;
+        if (!win.confirm(`Mover ${what} para a lixeira? Dá para trazer de volta depois.`)) return;
         try {
           await removeNote(n);
+          toast('Nota movida para a lixeira.');
           onDeleted();
         } catch (err) { toast(err.message); }
       };
