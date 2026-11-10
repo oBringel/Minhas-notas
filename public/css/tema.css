@@ -15,6 +15,7 @@
   --pine: #A62D5B;
   --pine2: #F8E1E9;
   --on-pine: #fff;
+  --ok-app: #2F7A4F;
   --bg-app: #FBF5F4;
   --surf: #ffffff;
   --ink-app: #2B1620;
@@ -97,6 +98,7 @@
   --blue-app: #8DB4EE; --blue2: #1E2B40;
   --pine: #F08FB0;
   --on-pine: #16100F;
+  --ok-app: #6FD39B;
   --shadow: 0 2px 10px rgba(0, 0, 0, .35);
   color-scheme: dark;
 }
@@ -488,7 +490,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--pine); outline: 
 
 /* notas / listas genéricas */
 /* cores de prazo (admissão e rescisão) saem do estilo atual, não de um pastel fixo */
-.note-pick, .pip-note { border-radius: 12px; }
+.note-pick, .pip-note { border-radius: 12px; background: var(--surf); }
 .note-pick.status-cold, .pip-note.status-cold {
   background: color-mix(in srgb, var(--blue-app) 8%, var(--surf));
   border-color: color-mix(in srgb, var(--blue-app) 30%, var(--line-app));
@@ -505,10 +507,17 @@ input:focus, select:focus, textarea:focus { border-color: var(--pine); outline: 
   border-left-color: var(--amb-app);
 }
 .note-pick.status-done, .pip-note.status-done {
-  background: var(--bg-app);
-  border-color: var(--line-app);
-  border-left-color: var(--pine);
+  background: color-mix(in srgb, var(--ok-app) 13%, var(--surf));
+  border-color: color-mix(in srgb, var(--ok-app) 32%, var(--line-app));
+  border-left-color: var(--ok-app);
 }
+.note-pick.status-done .face, .pip-note.status-done .face {
+  color: var(--ok-app);
+  font-weight: 700;
+}
+.note-pick.status-done strong, .pip-note.status-done strong { color: var(--ok-app); }
+[data-theme="dark"] .note-pick.status-done strong,
+[data-theme="dark"] .pip-note.status-done strong { color: color-mix(in srgb, var(--ok-app) 82%, #fff); }
 
 /* o cartão do checklist pede um respiro a mais no título */
 .check-panel { padding: 24px 24px 20px; }
