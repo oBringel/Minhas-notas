@@ -3,14 +3,14 @@
    Fica separado do style.css para não misturar com o visual das notas.
    ===================================================================== */
 
-/* ---------- Estrutura com menu lateral ---------- */
+/* ---------- Estrutura com navegação horizontal no topo ---------- */
 /* espaço para a barra fixa do rodapé (a janelinha flutuante não tem rodapé) */
 body:not(.pip) { padding-bottom: 72px; }
 
 .app-shell {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
   align-items: start;
   width: 100%;
   max-width: 1380px;
@@ -18,27 +18,25 @@ body:not(.pip) { padding-bottom: 72px; }
   padding: 0 24px;
   transition: grid-template-columns .2s ease;
 }
-.app-shell.is-collapsed { grid-template-columns: 64px minmax(0, 1fr); }
+.app-shell.is-collapsed { grid-template-columns: minmax(0, 1fr); }
 .views { max-width: none; margin: 0; padding: 0; min-width: 0; }
 .view { display: grid; gap: 18px; }
 .view[hidden] { display: none; }
 
-/* ---------- Sidebar / Menu ---------- */
-.sidebar { position: sticky; top: 16px; display: grid; gap: 6px; }
-.menu-toggle {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 100%; padding: 7px; border-radius: 10px;
-  background: transparent; color: var(--bordo); border: 1.5px solid var(--line);
-}
-.menu-toggle:hover { background: var(--rosa-suave); }
+/* ---------- Barra de navegação horizontal ---------- */
+.sidebar { position: static; display: block; }
+.menu-toggle { display: none; }
 .menu {
-  display: grid; gap: 2px; padding: 10px;
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 4px; padding: 8px;
   background: #fff;
   border: 1.5px solid var(--line);
   border-radius: 18px;
   box-shadow: var(--shadow);
-  transition: padding .2s ease;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.menu::-webkit-scrollbar { display: none; }
 .menu-link {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 10px; border-radius: 11px;
@@ -50,12 +48,9 @@ body:not(.pip) { padding-bottom: 72px; }
 .menu-link.active { background: var(--rosa-suave); color: var(--bordo); font-weight: 700; }
 .menu-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; flex-shrink: 0; color: var(--rosa-queimado); }
 .menu-link.active .menu-icon { color: var(--bordo); }
-.menu-label { overflow: hidden; transition: opacity .15s, width .15s; }
-.app-shell.is-collapsed .menu { padding: 8px 6px; }
-.app-shell.is-collapsed .menu-link { justify-content: center; padding: 9px 6px; gap: 0; }
-.app-shell.is-collapsed .menu-label { opacity: 0; width: 0; pointer-events: none; }
-.app-shell.is-collapsed .menu-toggle .toggle-icon { transform: rotate(180deg); }
-.menu-toggle .toggle-icon { transition: transform .2s ease; display: inline-flex; }
+.menu-label { white-space: nowrap; }
+.app-shell.is-collapsed .menu-link { justify-content: flex-start; padding: 9px 10px; gap: 10px; }
+.app-shell.is-collapsed .menu-label { opacity: 1; width: auto; pointer-events: auto; }
 
 /* ---------- Cabeçalho: botões da janelinha e da lixeira ---------- */
 .hero { gap: 14px; }
@@ -170,59 +165,17 @@ select:focus, input[type="date"]:focus, input[type="number"]:focus, input[type="
 .pend-pt:hover { background: var(--petal); border-color: var(--accent-soft); }
 .pend-pt.is-done { background: var(--rosa-queimado); color: #fff; border-color: var(--rosa-queimado); }
 .pend-pt:disabled { cursor: default; opacity: .7; }
-.pending-board {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: none;
+.pend-board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
-  box-sizing: border-box;
-}
-.pending-board::-webkit-scrollbar { width: 6px; background: transparent; }
-.pending-board::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
-.pending-board:hover { overflow: auto; }
-
-.pending-section {
-  display: flex;
-  flex-direction: column;
   width: 100%;
   min-width: 0;
-  box-sizing: border-box;
-  gap: 8px;
+  align-items: start;
 }
-
-.pending-section-header {
-  font-family: var(--font-title);
-  font-size: 13px;
-  color: #722D4D;
-  margin: 0 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--line);
-}
-
-.pill-count {
-  background: var(--petal);
-  color: #722D4D;
-  border-radius: 999px;
-  padding: 1px 8px;
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.pending-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 12px;
-  width: 100%;
-}
-
-.pend-col {
-  display: none;
-}
+.pend-board::-webkit-scrollbar { width: 6px; background: transparent; }
+.pend-board::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+.pend-board:hover { overflow: auto; }
 
 @media (max-width: 1100px) {
   .pend-board {

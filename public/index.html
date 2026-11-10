@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rotinas do DP | P&P</title>
+<title>Rotinas do DP</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg fill='%23E9A6BF'%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(72 20 20)'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(144 20 20)'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(216 20 20)'/%3E%3Cellipse cx='20' cy='9' rx='6.5' ry='9' transform='rotate(288 20 20)'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='5' fill='%23722D4D'/%3E%3C/svg%3E">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,8 +27,8 @@
 <body>
 <header class="hero">
   <div class="hero-text">
-    <h1>Rotinas do DP | P&amp;P</h1>
-    <p>Anotações, prazos e documentos num cantinho só seu.</p>
+    <h1>Rotinas do DP</h1>
+    <p>Prazos, admissões e rescisões</p>
   </div>
   <div class="hero-actions">
     <button id="openPip" class="hero-btn" type="button" aria-pressed="false"
@@ -49,13 +49,13 @@
       <span data-icon="chevrons-left" data-size="17" class="toggle-icon"></span>
     </button>
     <nav class="menu" aria-label="Menu principal">
-      <a class="menu-link" href="#/dashboard" data-view="dashboard" title="Dashboard"><span class="menu-icon" data-icon="home"></span><span class="menu-label">Dashboard</span></a>
-      <a class="menu-link" href="#/notas" data-view="notas" title="Notas"><span class="menu-icon" data-icon="notebook-pen"></span><span class="menu-label">Notas</span></a>
+      <a class="menu-link" href="#/dashboard" data-view="dashboard" title="Início"><span class="menu-icon" data-icon="home"></span><span class="menu-label">Início</span></a>
       <a class="menu-link" href="#/admissao" data-view="admissao" title="Admissão"><span class="menu-icon" data-icon="users"></span><span class="menu-label">Admissão</span></a>
       <a class="menu-link" href="#/rescisao" data-view="rescisao" title="Rescisão"><span class="menu-icon" data-icon="send"></span><span class="menu-label">Rescisão</span></a>
+      <a class="menu-link" href="#/calendario" data-view="calendario" title="Agenda"><span class="menu-icon" data-icon="calendar-days"></span><span class="menu-label">Agenda</span></a>
+      <a class="menu-link" href="#/calculadora" data-view="calculadora" title="Cálculos"><span class="menu-icon" data-icon="calculator"></span><span class="menu-label">Cálculos</span></a>
+      <a class="menu-link" href="#/notas" data-view="notas" title="Notas"><span class="menu-icon" data-icon="notebook-pen"></span><span class="menu-label">Notas</span></a>
       <a class="menu-link" href="#/ferias" data-view="ferias" title="Férias"><span class="menu-icon" data-icon="palmtree"></span><span class="menu-label">Férias</span></a>
-      <a class="menu-link" href="#/calculadora" data-view="calculadora" title="Calculadora"><span class="menu-icon" data-icon="calculator"></span><span class="menu-label">Calculadora</span></a>
-      <a class="menu-link" href="#/calendario" data-view="calendario" title="Calendário"><span class="menu-icon" data-icon="calendar-days"></span><span class="menu-label">Calendário</span></a>
       <a class="menu-link" href="#/arquivos" data-view="arquivos" title="Arquivos"><span class="menu-icon" data-icon="folder"></span><span class="menu-label">Arquivos</span></a>
     </nav>
   </aside>
@@ -148,41 +148,26 @@
           </div>
         </form>
 
-                <div class="pending-board">
-    <section class="pending-section" data-bucket="atrasadas">
-      <header class="pending-section-header">
-        Atrasadas <span class="pill-count"></span>
-      </header>
-      <div class="pending-cards">
-        <div class="pend-list" data-bucket="atrasadas"></div>
-      </div>
-    </section>
-    <section class="pending-section" data-bucket="hoje">
-      <header class="pending-section-header">
-        Para hoje <span class="pill-count"></span>
-      </header>
-      <div class="pending-cards">
-        <div class="pend-list" data-bucket="hoje"></div>
-      </div>
-    </section>
-    <section class="pending-section" data-bucket="semana">
-      <header class="pending-section-header">
-        Para esta semana <span class="pill-count"></span>
-      </header>
-      <div class="pending-cards">
-        <div class="pend-list" data-bucket="semana"></div>
-      </div>
-    </section>
-    <section class="pending-section" data-bucket="futuras">
-      <header class="pending-section-header">
-        Pendências futuras <span class="pill-count"></span>
-      </header>
-      <div class="pending-cards">
-        <div class="pend-list" data-bucket="futuras"></div>
-      </div>
-    </section>
-  </div>
-  <div class="pend-list-view" id="pendListView" hidden></div>
+                <div class="pend-board" id="pendBoard">
+          <div class="pend-col" data-bucket="atrasadas">
+            <h3>Atrasadas <span class="pill-count"></span></h3>
+            <div class="pend-list" data-bucket="atrasadas"></div>
+          </div>
+          <div class="pend-col" data-bucket="hoje">
+            <h3>Para hoje <span class="pill-count"></span></h3>
+            <div class="pend-list" data-bucket="hoje"></div>
+          </div>
+          <div class="pend-col" data-bucket="semana">
+            <h3>Para esta semana <span class="pill-count"></span></h3>
+            <div class="pend-list" data-bucket="semana"></div>
+          </div>
+          <div class="pend-col" data-bucket="futuras">
+            <h3>Pendências futuras <span class="pill-count"></span></h3>
+            <div class="pend-list" data-bucket="futuras"></div>
+          </div>
+        </div>
+        <div class="pend-list-view" id="pendListView" hidden></div>
+      </section>
 
       <section class="score panel" aria-label="Desempenho e gamificação">
         <div id="scoreBox"><p class="score-loading">Carregando pontuação…</p></div>
