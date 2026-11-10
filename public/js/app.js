@@ -315,13 +315,15 @@ pipButton.onclick = async () => {
 
 // ---------- Decoração do cabeçalho ----------
 function decorateHero() {
+  const deco = $('#deco');
+  if (!deco) return; // o cabeçalho novo não usa as florzinhas
   const spots = [
     [48, 70, 70, '#fff', '#ffd966'],
     [118, 38, 52, '#ff7eb6', '#fff3b0'],
     [150, 86, 40, '#ffe3ef', '#d63384'],
     [26, 18, 30, '#ffffff', '#ff7eb6'],
   ];
-  $('#deco').innerHTML = spots.map(([x, y, s, p, c]) =>
+  deco.innerHTML = spots.map(([x, y, s, p, c]) =>
     `<g transform="translate(${x - s / 2} ${y - s / 2}) scale(${s / 40})">${flowerSVG(p, c).replace(/<\/?svg[^>]*>/g, '')}</g>`
   ).join('');
 }

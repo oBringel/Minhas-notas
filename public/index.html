@@ -8,13 +8,12 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" media="print" onload="this.media='all'"
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap"></noscript>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=DM+Sans:wght@400;500;600;700&family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;500;600&family=Lora:wght@500;700&family=Manrope:wght@400;500;600&family=Young+Serif&family=Nunito+Sans:wght@400;600&family=DM+Serif+Display&family=Outfit:wght@400;500;600&display=swap">
 
 <link rel="stylesheet" href="css/style.css?v=__V__">
 <link rel="stylesheet" href="css/panel.css?v=__V__">
 <link rel="stylesheet" href="css/pip.css?v=__V__">
+<link rel="stylesheet" href="css/tema.css?v=__V__">
 
 <link rel="modulepreload" href="js/api.js">
 <link rel="modulepreload" href="js/util.js">
@@ -25,29 +24,14 @@
 <link rel="modulepreload" href="js/editor.js">
 </head>
 <body>
-<header class="hero">
-  <div class="hero-text">
-    <h1>Rotinas do DP</h1>
-    <p>Prazos, admissões e rescisões</p>
-  </div>
-  <div class="hero-actions">
-    <button id="openPip" class="hero-btn" type="button" aria-pressed="false"
-            title="Abre as notas numa janelinha que fica por cima dos outros programas">
-      <span data-icon="external-link" data-size="16"></span> Janelinha</button>
-    <button id="openTrash" class="hero-btn" type="button" aria-pressed="false"
-            title="Notas excluídas: daqui dá para voltar atrás">
-      <span data-icon="trash-2" data-size="16"></span> Lixeira</button>
-  </div>
-  <svg class="hero-flowers" viewBox="0 0 200 120" aria-hidden="true">
-    <g id="deco"></g>
-  </svg>
-</header>
+<details class="sty" id="estilos">
+  <summary>Estilos</summary>
+  <div class="p" id="sp"></div>
+</details>
 
 <div class="app-shell" id="appShell">
   <aside class="sidebar" id="sidebar">
-    <button class="menu-toggle" id="menuToggle" type="button" aria-label="Recolher menu" aria-expanded="true" title="Recolher menu">
-      <span data-icon="chevrons-left" data-size="17" class="toggle-icon"></span>
-    </button>
+    <div class="brand">Rotinas do DP<small>Prazos, admissões e rescisões</small></div>
     <nav class="menu" aria-label="Menu principal">
       <a class="menu-link" href="#/dashboard" data-view="dashboard" title="Início"><span class="menu-icon" data-icon="home"></span><span class="menu-label">Início</span></a>
       <a class="menu-link" href="#/admissao" data-view="admissao" title="Admissão"><span class="menu-icon" data-icon="users"></span><span class="menu-label">Admissão</span></a>
@@ -58,11 +42,27 @@
       <a class="menu-link" href="#/ferias" data-view="ferias" title="Férias"><span class="menu-icon" data-icon="palmtree"></span><span class="menu-label">Férias</span></a>
       <a class="menu-link" href="#/arquivos" data-view="arquivos" title="Arquivos"><span class="menu-icon" data-icon="folder"></span><span class="menu-label">Arquivos</span></a>
     </nav>
+    <div class="side-extra">
+      <button id="openPip" class="side-btn" type="button" aria-pressed="false"
+              title="Abre as notas numa janelinha que fica por cima dos outros programas">
+        <span data-icon="external-link" data-size="16"></span> Janelinha</button>
+      <button id="openTrash" class="side-btn" type="button" aria-pressed="false"
+              title="Notas excluídas: daqui dá para voltar atrás">
+        <span data-icon="trash-2" data-size="16"></span> Lixeira</button>
+    </div>
   </aside>
 
   <main class="views">
     <!-- ================= DASHBOARD ================= -->
     <section class="view" id="view-dashboard" data-view="dashboard" hidden>
+
+      <div class="top">
+        <div>
+          <h1 id="topTitle">Bom dia, Áquila</h1>
+          <p id="topSub">Suas pendências e prazos do dia.</p>
+        </div>
+        <button class="btn" id="topNewPend" type="button">Nova pendência</button>
+      </div>
 
       <div class="kpi-strip" id="kpiStrip" aria-label="Indicadores gerais">
         <button type="button" class="kpi" data-kpi="abertas">
@@ -83,9 +83,10 @@
         </button>
       </div>
 
+      <div class="cols">
       <section class="panel pend-panel">
         <div class="panel-head">
-          <h2>Quadro de Pendências</h2>
+          <h2>Suas pendências</h2>
           <div class="head-actions pend-controls">
             <div class="pend-filters">
               <select id="pendFilterModule" aria-label="Filtrar por módulo">
@@ -169,6 +170,7 @@
         <div class="pend-list-view" id="pendListView" hidden></div>
       </section>
 
+      <div class="stack">
       <section class="score panel" aria-label="Desempenho e gamificação">
         <div id="scoreBox"><p class="score-loading">Carregando pontuação…</p></div>
       </section>
@@ -205,6 +207,8 @@
           <div class="panel-head" style="margin-bottom:8px"><h2>Próximos compromissos</h2><a class="ghost small button-link" href="#/calendario"><span data-icon="calendar" data-size="14"></span> Calendário</a></div>
           <div id="upcomingList" class="upcoming-list"><p class="pend-empty">Carregando…</p></div>
         </section>
+      </div>
+      </div>
       </div>
 
     </section>
@@ -502,6 +506,7 @@
 <div id="toast" class="toast" role="status" hidden></div>
 
 <script id="boot" type="application/json">__BOOT__</script>
+<script type="module" src="js/tema.js?v=__V__"></script>
 <script type="module" src="js/app.js?v=__V__"></script>
 </body>
 </html>

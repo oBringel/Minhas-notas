@@ -3,14 +3,14 @@
    Fica separado do style.css para não misturar com o visual das notas.
    ===================================================================== */
 
-/* ---------- Estrutura com navegação horizontal no topo ---------- */
+/* ---------- Estrutura com menu lateral ---------- */
 /* espaço para a barra fixa do rodapé (a janelinha flutuante não tem rodapé) */
 body:not(.pip) { padding-bottom: 72px; }
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
   width: 100%;
   max-width: 1380px;
@@ -18,25 +18,27 @@ body:not(.pip) { padding-bottom: 72px; }
   padding: 0 24px;
   transition: grid-template-columns .2s ease;
 }
-.app-shell.is-collapsed { grid-template-columns: minmax(0, 1fr); }
+.app-shell.is-collapsed { grid-template-columns: 64px minmax(0, 1fr); }
 .views { max-width: none; margin: 0; padding: 0; min-width: 0; }
 .view { display: grid; gap: 18px; }
 .view[hidden] { display: none; }
 
-/* ---------- Barra de navegação horizontal ---------- */
-.sidebar { position: static; display: block; }
-.menu-toggle { display: none; }
+/* ---------- Sidebar / Menu ---------- */
+.sidebar { position: sticky; top: 16px; display: grid; gap: 6px; }
+.menu-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 100%; padding: 7px; border-radius: 10px;
+  background: transparent; color: var(--bordo); border: 1.5px solid var(--line);
+}
+.menu-toggle:hover { background: var(--rosa-suave); }
 .menu {
-  display: flex; flex-wrap: wrap; justify-content: center;
-  gap: 4px; padding: 8px;
+  display: grid; gap: 2px; padding: 10px;
   background: #fff;
   border: 1.5px solid var(--line);
   border-radius: 18px;
   box-shadow: var(--shadow);
-  overflow-x: auto;
-  scrollbar-width: none;
+  transition: padding .2s ease;
 }
-.menu::-webkit-scrollbar { display: none; }
 .menu-link {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 10px; border-radius: 11px;
@@ -48,9 +50,12 @@ body:not(.pip) { padding-bottom: 72px; }
 .menu-link.active { background: var(--rosa-suave); color: var(--bordo); font-weight: 700; }
 .menu-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; flex-shrink: 0; color: var(--rosa-queimado); }
 .menu-link.active .menu-icon { color: var(--bordo); }
-.menu-label { white-space: nowrap; }
-.app-shell.is-collapsed .menu-link { justify-content: flex-start; padding: 9px 10px; gap: 10px; }
-.app-shell.is-collapsed .menu-label { opacity: 1; width: auto; pointer-events: auto; }
+.menu-label { overflow: hidden; transition: opacity .15s, width .15s; }
+.app-shell.is-collapsed .menu { padding: 8px 6px; }
+.app-shell.is-collapsed .menu-link { justify-content: center; padding: 9px 6px; gap: 0; }
+.app-shell.is-collapsed .menu-label { opacity: 0; width: 0; pointer-events: none; }
+.app-shell.is-collapsed .menu-toggle .toggle-icon { transform: rotate(180deg); }
+.menu-toggle .toggle-icon { transition: transform .2s ease; display: inline-flex; }
 
 /* ---------- Cabeçalho: botões da janelinha e da lixeira ---------- */
 .hero { gap: 14px; }
