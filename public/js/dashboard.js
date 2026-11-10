@@ -248,19 +248,13 @@ function renderPendencias() {
       semana: 'Nada para esta semana.',
       futuras: 'Sem pendências futuras.',
     };
-    // Process each bucket ensuring correct rendering
     for (const b of BUCKETS) {
       const section = board.querySelector(`.pending-section[data-bucket="${b}"]`);
-      // Find the pend-list specifically within this section's pending-cards
       const list = section?.querySelector('.pending-cards .pend-list[data-bucket="${b}"]');
       const countEl = section?.querySelector('.pending-section-header .pill-count');
-      // Safety check - if list not found, try alternative selector
-      if (!list) { console.warn(\`List not found for bucket ${b}, trying alternative\`); const altList = board.querySelector(`.pend-list[data-bucket="${b}"]`); if (altList) list = altList; }
       if (!list) continue;
-      // Filter items for this specific bucket
       const items = filtered.filter((e) => e.bucket === b);
-      if (items.length === 0 && countEl) countEl.textContent = '';
-      // Render cards into the correct list
+      if (countEl) countEl.textContent = items.length || '';
       list.innerHTML = items.length
         ? items.map(cardHtml).join('')
         : `<p class="pend-empty">${vazios[b]}</p>`;
