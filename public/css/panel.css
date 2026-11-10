@@ -171,35 +171,114 @@ select:focus, input[type="date"]:focus, input[type="number"]:focus, input[type="
 .pend-pt.is-done { background: var(--rosa-queimado); color: #fff; border-color: var(--rosa-queimado); }
 .pend-pt:disabled { cursor: default; opacity: .7; }
 .pend-board {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
-  overflow-x: auto;
-  padding-bottom: 8px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line) transparent;
+  width: 100%;
+  min-width: 0;
+  align-items: start;
 }
 .pend-board::-webkit-scrollbar { width: 6px; background: transparent; }
 .pend-board::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+.pend-board:hover { overflow: auto; }
 
 @media (max-width: 1100px) {
-  .pend-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pend-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .pend-board::-webkit-scrollbar { display: none; }
+  .pend-board::-webkit-scrollbar { width: 6px; background: transparent; }
+  .pend-board:hover::-webkit-scrollbar { display: block; }
 }
 @media (max-width: 620px) {
-  .pend-board { grid-template-columns: minmax(0, 1fr); }
+  .pend-board {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    overflow-x: auto;
+    overscroll-x: touch;
+  }
+  .pend-board::-webkit-scrollbar { display: none; }
+  .pend-board:hover::-webkit-scrollbar { display: block; }
 }
 .pend-col {
-  flex: 0 0 auto;
-  width: 220px;
+  min-width: 0;
   background: #FFFAFC;
   border: 1.5px solid var(--line);
   border-radius: 18px;
   padding: 12px;
-  min-height: 90px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  height: 100%;
 }
+.pend-col h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-title);
+  font-size: 13px;
+  color: #722D4D;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+.pill-count {
+  background: var(--petal);
+  color: #722D4D;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+}
+.pend-item {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  padding: 9px 10px;
+  margin-bottom: 8px;
+  border: 1.5px solid var(--line);
+  border-radius: 13px;
+  background: #fff;
+  flex-wrap: wrap;
+}
+.pend-item strong { font-size: 13.5px; overflow-wrap: anywhere; }
+.pend-item small { display: block; color: var(--muted); font-size: 11.5px; }
+.pend-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.tag {
+  font-size: 10.5px; font-weight: 700;
+  padding: 1px 7px; border-radius: 999px;
+  background: var(--petal-light); color: #722D4D;
+}
+.tag.alta { background: #F9E4EB; color: #A2455F; }
+.tag.media { background: #F8EFDF; color: #8A6A3A; }
+.tag.baixa { background: #E7F0E8; color: #3F6B4A; }
+.tag.auto { background: #EFE9F7; color: #6B4E86; }
+.tag.late { background: #F4D3DE; color: #A2455F; }
+.pend-actions { display: flex; gap: 2px; }
+.icon-btn {
+  background: transparent; color: #A2455F;
+  padding: 3px 6px; font-size: 13px; border-radius: 8px;
+  line-height: 1.1;
+}
+.icon-btn:hover { background: var(--petal); }
+.pend-empty { color: var(--muted); font-size: 12px; text-align: center; padding: 10px 0; }
+.pend-item.is-late { border-color: #DB9AB0; background: #fff4f7; }
+.pend-meta { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.tag.module { background: var(--petal-light); color: #722D4D; }
+.tag.prazo { background: #F3EDEF; color: #6B5B64; }
+.tag.prazo.late { background: #F4D3DE; color: #A2455F; }
+.sit-atrasada { background: #F4D3DE; color: #A2455F; }
+.sit-hoje { background: #F8EFDF; color: #8A6A3A; }
+.sit-aberta { background: #EFE9F7; color: #6B4E86; }
+.sit-concluida { background: #E7F0E8; color: #3F6B4A; }
+
 .pend-col h3 {
   margin: 0 0 8px;
   font-family: var(--font-title);
