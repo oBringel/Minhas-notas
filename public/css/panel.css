@@ -149,7 +149,7 @@ select:focus, input[type="date"]:focus, input[type="number"]:focus, input[type="
 /* ---------- Quadro de Pendências ---------- */
 .pend-panel .panel-head { flex-direction: column; align-items: stretch; gap: 10px; }
 .pend-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.pend-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pend-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
 .view-switch { display: inline-flex; gap: 4px; align-items: center; }
 .view-btn {
   display: inline-flex; align-items: center; justify-content: center;
