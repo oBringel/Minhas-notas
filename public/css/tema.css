@@ -111,6 +111,8 @@ body {
   font: 400 16px/1.5 var(--font-body);
 }
 body::before, body::after { content: none !important; display: none !important; }
+/* o atributo hidden precisa vencer os display: flex/grid das nossas classes */
+[hidden] { display: none !important; }
 h1, h2, h3 { font-family: var(--font-title); margin: 0; letter-spacing: -.01em; }
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--blue-app); outline-offset: 2px; }
@@ -227,7 +229,7 @@ button, .button, .button-link, label.button {
   border-radius: 10px;
 }
 button.small, .button.small, label.button.small { min-height: 40px; padding: 0 14px; }
-.view button:not(.icon-btn):not(.pend-pt):not(.view-btn):not(.cal-view-btn):not(.kpi):not(.side-btn):not(.chip):not(.menu-toggle),
+.view button:not(.icon-btn):not(.pend-pt):not(.view-btn):not(.cal-view-btn):not(.kpi):not(.side-btn):not(.chip):not(.menu-toggle):not(.cal-day):not(.cal-filter):not(.cal-yitem):not(.cal-ylink):not(.cal-nav):not(.cal-year-btn):not(.cal-holiday):not(.cal-chip),
 .button, label.button {
   background: var(--pine);
   color: #fff;
@@ -237,7 +239,7 @@ button.small, .button.small, label.button.small { min-height: 40px; padding: 0 1
   font-weight: 600;
   box-shadow: none;
 }
-.view button:not(.icon-btn):not(.pend-pt):not(.view-btn):not(.cal-view-btn):not(.kpi):not(.side-btn):not(.chip):not(.menu-toggle):hover,
+.view button:not(.icon-btn):not(.pend-pt):not(.view-btn):not(.cal-view-btn):not(.kpi):not(.side-btn):not(.chip):not(.menu-toggle):not(.cal-day):not(.cal-filter):not(.cal-yitem):not(.cal-ylink):not(.cal-nav):not(.cal-year-btn):not(.cal-holiday):not(.cal-chip):hover,
 .button:hover, label.button:hover { filter: brightness(1.06); }
 button.secondary, button.ghost, .secondary, .ghost {
   background: var(--surf) !important;
@@ -288,6 +290,15 @@ button.secondary, button.ghost, .secondary, .ghost {
 .kpi[data-kpi="hoje"] strong { color: var(--amb-app); }
 .kpi[data-kpi="concluidas"] strong { color: var(--pine); }
 .kpi.is-active, .kpi.sel { outline: 2px solid var(--pine); }
+/* o KPI é superfície, não botão de ação: nunca recebe preenchimento */
+.view .kpi, .view .kpi:hover { background: var(--surf); color: var(--ink-app); }
+.view .kpi.is-active, .view .kpi.sel {
+  background: var(--surf);
+  outline: 2px solid var(--pine);
+  outline-offset: -2px;
+  border-color: var(--pine);
+  box-shadow: none;
+}
 
 /* ---------- Quadro de Pendências (lista agrupada) ---------- */
 .pend-panel .panel-head { flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 10px 18px; }
@@ -302,6 +313,7 @@ button.secondary, button.ghost, .secondary, .ghost {
 .view-btn { min-height: 38px; padding: 0 10px; background: var(--surf); color: var(--mut-app); border: 0; }
 .view-btn.is-active { background: var(--pine2); color: var(--pine); }
 
+.pend-board.is-hidden { display: none !important; }
 .pend-board {
   display: flex;
   flex-direction: column;
@@ -450,29 +462,156 @@ input:focus, select:focus, textarea:focus { border-color: var(--pine); outline: 
 .mc-icon { color: var(--pine); }
 
 /* notas / listas genéricas */
+/* cores de prazo (admissão e rescisão) saem do estilo atual, não de um pastel fixo */
+.note-pick, .pip-note { border-radius: 12px; }
+.note-pick.status-cold, .pip-note.status-cold {
+  background: color-mix(in srgb, var(--blue-app) 8%, var(--surf));
+  border-color: color-mix(in srgb, var(--blue-app) 30%, var(--line-app));
+}
+.note-pick.status-angry, .pip-note.status-angry,
+.note-pick.status-late, .pip-note.status-late {
+  background: color-mix(in srgb, var(--red-app) 7%, var(--surf));
+  border-color: color-mix(in srgb, var(--red-app) 28%, var(--line-app));
+  border-left-color: var(--red-app);
+}
+.note-pick.status-today, .pip-note.status-today {
+  background: color-mix(in srgb, var(--amb-app) 9%, var(--surf));
+  border-color: color-mix(in srgb, var(--amb-app) 28%, var(--line-app));
+  border-left-color: var(--amb-app);
+}
+.note-pick.status-done, .pip-note.status-done {
+  background: var(--bg-app);
+  border-color: var(--line-app);
+  border-left-color: var(--pine);
+}
+
+/* o cartão do checklist pede um respiro a mais no título */
+.check-panel { padding: 24px 24px 20px; }
+.check-panel h2 { padding: 0 2px; margin-bottom: 14px; }
+.check-panel .inline-form { margin-bottom: 4px; }
+
 .note-list { display: flex; flex-direction: column; }
 .empty, .pend-empty { color: var(--mut-app); }
 .foot, .sub, .muted { color: var(--mut-app); font-size: 13px; }
 
-/* agenda (calendário) */
+/* ---------- Agenda (calendário) ---------- */
 .cal-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 18px; align-items: start; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-.cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px; }
-.cal-weekdays span { font-size: 12px; font-weight: 600; color: var(--mut-app); text-align: center; padding: 4px 0; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.cal-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: 6px; }
+.cal-weekdays span { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--mut-app); text-align: center; padding: 4px 0; }
+.cal-weekdays .wd-sat, .cal-weekdays .wd-sun { color: var(--mut-app); }
+
 .cal-day, .cd {
-  min-height: 78px;
+  min-height: 82px;
   border: 1px solid var(--line-app);
-  border-radius: 10px;
-  padding: 6px;
+  border-radius: 12px;
+  padding: 7px;
   font-size: 13px;
   background: var(--surf);
   color: var(--ink-app);
+  box-shadow: none;
+  transition: background .12s ease, border-color .12s ease;
 }
-.cal-day.is-weekend, .cd.we { background: var(--bg-app); }
-.cal-day.is-today, .cd.t { outline: 2px solid var(--pine); }
-.cal-day.is-out, .cd.o { opacity: .4; }
-.cal-view-btn { min-height: 38px; padding: 0 12px; background: var(--surf); border: 0; color: var(--mut-app); }
-.cal-view-btn.is-active { background: var(--pine2); color: var(--pine); }
+.cal-day:hover, .cd:hover { background: var(--bg-app); border-color: color-mix(in srgb, var(--pine) 30%, var(--line-app)); }
+.cal-day.is-weekend, .cd.we { background: color-mix(in srgb, var(--bg-app) 70%, var(--surf)); }
+.cal-day.is-holiday, .cal-day.is-holiday.is-weekend { background: color-mix(in srgb, var(--pine) 6%, var(--surf)); }
+.cal-day .num { color: var(--ink-app); font-weight: 600; }
+.cal-day .num.d-sat, .cal-day .num.d-sun { color: var(--mut-app); }
+.cal-day .num.d-holiday { color: var(--pine); }
+.cal-day.is-today, .cd.t { outline: 0; border-color: var(--pine); box-shadow: inset 0 0 0 1px var(--pine); }
+.cal-day.is-today .num {
+  background: var(--pine);
+  color: #fff;
+  border-radius: 7px;
+  padding: 1px 6px;
+  font-weight: 700;
+}
+.cal-day.is-selected { border-color: var(--pine); background: var(--pine2); box-shadow: none; }
+.cal-day.is-selected .num { color: var(--pine); }
+.cal-day.is-today.is-selected .num, .cal-day.is-today .num.d-sat,
+.cal-day.is-today .num.d-sun, .cal-day.is-today .num.d-holiday { color: #fff; }
+.cal-day.is-other, .cal-day.is-out, .cd.o { opacity: .38; }
+
+/* campos de cidade / busca do topo */
+.cal-loc-field {
+  background: var(--surf);
+  border: 1px solid var(--line-app);
+  border-radius: 10px;
+  color: var(--ink-app);
+}
+.cal-loc-field select, .cal-loc-field input {
+  border: 0;
+  background: transparent;
+  min-height: 38px;
+  padding: 0 8px;
+  color: var(--ink-app);
+}
+.cal-loc-field:focus-within {
+  border-color: var(--pine);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pine) 14%, transparent);
+}
+
+/* etiquetas e tipos de data */
+.cal-chip {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--tipo, var(--pine)) 12%, var(--surf));
+  color: color-mix(in srgb, var(--tipo, var(--pine)) 88%, var(--ink-app));
+  border: 0;
+}
+.cal-chip.auto { border: 1px dashed color-mix(in srgb, var(--tipo, var(--pine)) 35%, transparent); }
+.cal-holiday { background: color-mix(in srgb, var(--tipo) 10%, var(--surf)); border-left: 3px solid var(--tipo); }
+.cal-holiday strong { color: color-mix(in srgb, var(--tipo) 85%, var(--ink-app)); }
+
+/* filtros por tipo: pílula neutra, cor só no ponto e quando ativa */
+.cal-filter {
+  padding: 5px 12px;
+  border: 1px solid var(--line-app);
+  background: var(--surf);
+  color: var(--mut-app);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: none;
+}
+.cal-filter .dot { background: var(--tipo); opacity: .8; }
+.cal-filter:hover { border-color: color-mix(in srgb, var(--tipo) 45%, var(--line-app)); background: var(--bg-app); }
+.cal-filter.is-on {
+  color: color-mix(in srgb, var(--tipo) 88%, var(--ink-app));
+  background: color-mix(in srgb, var(--tipo) 12%, var(--surf));
+  border-color: color-mix(in srgb, var(--tipo) 55%, var(--line-app));
+}
+
+/* alternador Mês / Ano */
+.cal-view-btn { min-height: 34px; padding: 0 16px; background: transparent; border: 0; color: var(--mut-app); font-weight: 600; }
+.cal-view-btn:hover { background: var(--bg-app); }
+.cal-view-btn.is-active { background: var(--surf); color: var(--pine); box-shadow: 0 1px 3px rgba(0, 0, 0, .08); }
+.cal-year-btn, .cal-nav { background: transparent; color: var(--mut-app); }
+.cal-year-btn:hover, .cal-nav:hover { background: var(--bg-app); color: var(--ink-app); }
+.cal-title h2 { color: var(--ink-app); }
+
+/* visão anual */
+.cal-ycard { background: var(--bg-app); border: 1px solid var(--line-app); border-radius: 12px; }
+.cal-ycard header strong { color: var(--ink-app); font-family: var(--font-title); }
+.cal-yitem { color: var(--ink-app); background: none; }
+.cal-yitem:hover { background: var(--pine2); }
+.cal-yday { color: var(--pine); }
+.cal-ylink { background: none; color: var(--pine); }
+
+/* legenda */
+.cal-legend { color: var(--mut-app); }
+.dot-week { background: var(--ink-app); }
+.dot-sat, .dot-sun { background: var(--mut-app); }
+.dot-holiday { background: var(--pine); }
+.dot-event { background: color-mix(in srgb, var(--pine) 45%, var(--surf)); }
+
+/* modo escuro: nada de branco fixo */
+[data-theme="dark"] .cal-day.is-holiday,
+[data-theme="dark"] .cal-day.is-holiday.is-weekend { background: color-mix(in srgb, var(--pine) 10%, var(--surf)); }
+[data-theme="dark"] .cal-chip { background: color-mix(in srgb, var(--tipo, var(--pine)) 26%, var(--bg-app)); color: color-mix(in srgb, var(--tipo, var(--pine)) 45%, #fff); }
+[data-theme="dark"] .cal-filter.is-on { background: color-mix(in srgb, var(--tipo) 24%, var(--bg-app)); color: color-mix(in srgb, var(--tipo) 40%, #fff); }
+[data-theme="dark"] .cal-holiday { background: color-mix(in srgb, var(--tipo) 22%, var(--bg-app)); }
 
 /* calculadora: resultado */
 .calc-result, .res {

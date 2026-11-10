@@ -83,7 +83,7 @@ function atualizarCabecalho() {
 
   const h = new Date().getHours();
   const saudacao = h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite';
-  titulo.textContent = `${saudacao}, Áquila`;
+  titulo.textContent = `${saudacao}, Lavinia Mendes`;
 
   const hoje = new Date();
   const data = `${DIAS[hoje.getDay()]}, ${hoje.getDate()} de ${MESES[hoje.getMonth()]}`;
