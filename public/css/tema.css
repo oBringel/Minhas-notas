@@ -624,6 +624,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--pine); outline: 
 .cal-year-btn, .cal-nav { background: transparent; color: var(--mut-app); }
 .cal-year-btn:hover, .cal-nav:hover { background: var(--bg-app); color: var(--ink-app); }
 .cal-title h2 { color: var(--ink-app); }
+/* o dia escolhido é o título do painel: primeiro item a ser lido */
+#calDayTitle { font-size: 23px; font-weight: 700; margin-bottom: 2px; }
 
 /* visão anual */
 .cal-ycard { background: var(--bg-app); border: 1px solid var(--line-app); border-radius: 12px; }

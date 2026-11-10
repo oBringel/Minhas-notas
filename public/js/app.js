@@ -340,7 +340,7 @@ initDashboard({ toast, navigate: go, openNote, closeDrawer: closeEditor });
 initSidebar();
 
 initFiles({ toast });
-initCalendar({ toast });
+initCalendar({ toast, openNote, navigate: go, closeDrawer: closeEditor });
 initVacations({ toast });
 initCalculator();
 initNotice({ toast });

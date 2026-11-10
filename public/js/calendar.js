@@ -19,7 +19,7 @@ const CATEGORY_LABEL = {
   documento: 'Documentação', feriado: 'Feriado', geral: 'Geral',
 };
 
-let ctx = { toast: () => {} };
+let ctx = { toast: () => {}, openNote: () => {}, navigate: () => {}, closeDrawer: () => {} };
 let events = [];
 let customDates = [];
 let year = new Date().getFullYear();
@@ -41,6 +41,7 @@ function derivedEvents() {
       out.push({
         id: `auto:adm:${n.id}`, auto: true, title: `Admissão · ${n.employee_name || n.title}`,
         day: n.admission_date, category: 'admissao', module: 'admissao',
+        noteId: n.id,
         description: n.company || 'Admissão programada',
       });
     }
@@ -49,6 +50,7 @@ function derivedEvents() {
         out.push({
           id: `auto:res:send:${n.id}`, auto: true, title: `Enviar prévia · ${n.title}`,
           day: n.send_limit, category: 'prazo', module: 'rescisao',
+          noteId: n.id,
           description: n.company || 'Prazo da rescisão',
         });
       }
@@ -56,6 +58,7 @@ function derivedEvents() {
         out.push({
           id: `auto:res:pay:${n.id}`, auto: true, title: `Pagamento · ${n.title}`,
           day: n.pay_limit, category: 'prazo', module: 'rescisao',
+          noteId: n.id,
           description: n.company || 'Limite de pagamento',
         });
       }
@@ -66,13 +69,15 @@ function derivedEvents() {
     if (validDay(v.start_date)) {
       out.push({
         id: `auto:vac:start:${v.id}`, auto: true, title: `Início das férias · ${who}`,
-        day: v.start_date, category: 'ferias', module: 'ferias', description: v.company || '',
+        day: v.start_date, category: 'ferias', module: 'ferias', vacationId: v.id,
+        description: v.company || '',
       });
     }
     if (validDay(v.end_date)) {
       out.push({
         id: `auto:vac:end:${v.id}`, auto: true, title: `Volta das férias · ${who}`,
-        day: v.end_date, category: 'ferias', module: 'ferias', description: v.company || '',
+        day: v.end_date, category: 'ferias', module: 'ferias', vacationId: v.id,
+        description: v.company || '',
       });
     }
   }
@@ -250,8 +255,12 @@ function renderDay() {
     : '';
 
   const items = eventsOn(selected);
-  const parts = items.map((ev) => `
-    <div class="cal-event cat-${ev.category}" data-id="${esc(ev.id)}">
+  const parts = items.map((ev) => {
+    // Compromissos que vêm de um módulo abrem o registro de origem no clique.
+    const alvo = ev.noteId ? ` data-note="${esc(ev.noteId)}"` : ev.vacationId ? ` data-vac="${esc(ev.vacationId)}"` : '';
+    const abre = alvo ? ' is-link" role="button" tabindex="0"' : '';
+    return `
+    <div class="cal-event cat-${ev.category}${alvo ? ' is-link' : ''}"${abre} data-id="${esc(ev.id)}"${alvo}>
       <div>
         <strong>${esc(ev.title)}</strong>
         ${ev.description ? `<small>${esc(ev.description)}</small>` : ''}
@@ -262,7 +271,8 @@ function renderDay() {
           <button type="button" class="icon-btn" data-editev title="Editar evento">${icon('pencil', { size: 15 })}</button>
           <button type="button" class="icon-btn" data-delev title="Excluir evento">${icon('trash-2', { size: 15 })}</button>`}
       </div>
-    </div>`);
+    </div>`;
+  });
 
   if (!items.length) parts.push('<p class="empty">Nenhum compromisso neste dia.</p>');
   list.innerHTML = parts.join('');
@@ -497,6 +507,20 @@ export function initCalendar(options) {
 
   $('#calEventCancel').onclick = () => resetEventForm();
 
+  // Abre no módulo de origem o compromisso que veio de admissão, rescisão ou férias.
+  const abrirOrigem = (card) => {
+    if (!card) return false;
+    if (card.dataset.note) { ctx.openNote(card.dataset.note); return true; }
+    if (card.dataset.vac) { ctx.closeDrawer(); ctx.navigate('ferias'); return true; }
+    return false;
+  };
+
+  $('#calDayEvents').onkeydown = (ev) => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    if (ev.target.closest('button')) return;
+    if (abrirOrigem(ev.target.closest('.cal-event[data-note], .cal-event[data-vac]'))) ev.preventDefault();
+  };
+
   $('#calDayEvents').onclick = async (ev) => {
     const edit = ev.target.closest('[data-editev]');
     if (edit) {
@@ -504,6 +528,7 @@ export function initCalendar(options) {
       return;
     }
     const del = ev.target.closest('[data-delev]');
+    if (abrirOrigem(ev.target.closest('.cal-event'))) return;
     if (!del) return;
     const id = del.closest('.cal-event')?.dataset.id;
     if (!id || !window.confirm('Excluir este evento?')) return;
