@@ -643,7 +643,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--pine); outline: 
 /* modo escuro: nada de branco fixo */
 [data-theme="dark"] .cal-day.is-holiday,
 [data-theme="dark"] .cal-day.is-holiday.is-weekend { background: color-mix(in srgb, var(--pine) 10%, var(--surf)); }
-[data-theme="dark"] .cal-chip { background: color-mix(in srgb, var(--tipo, var(--pine)) 26%, var(--bg-app)); color: color-mix(in srgb, var(--tipo, var(--pine)) 45%, #fff); }
+[data-theme="dark"] .cal-chip {
+  background: color-mix(in srgb, var(--tipo, var(--pine)) 30%, var(--bg-app));
+  color: color-mix(in srgb, var(--tipo, var(--pine)) 22%, #fff);
+}
+[data-theme="dark"] .cal-holiday strong { color: color-mix(in srgb, var(--bordo) 78%, #fff); }
 [data-theme="dark"] .cal-filter.is-on { background: color-mix(in srgb, var(--tipo) 24%, var(--bg-app)); color: color-mix(in srgb, var(--tipo) 40%, #fff); }
 [data-theme="dark"] .cal-holiday { background: color-mix(in srgb, var(--tipo) 22%, var(--bg-app)); }
 

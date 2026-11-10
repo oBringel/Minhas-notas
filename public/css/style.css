@@ -63,7 +63,7 @@ body::before {
   font-size: 13.5px;
   font-weight: 600;
   letter-spacing: .02em;
-  color: #722D4D;
+  color: var(--bordo);
   background: #FBF1F5;
   border-bottom: 1.5px solid var(--line);
 }
@@ -79,7 +79,7 @@ body::after {
   font-style: italic;
   font-weight: 600;
   font-size: 16px;
-  color: #722D4D;
+  color: var(--bordo);
   border-top: 2px dashed var(--line);
 }
 
@@ -102,9 +102,9 @@ body::after {
   font-size: 34px;
   line-height: 1.12;
   letter-spacing: .2px;
-  color: #722D4D;
+  color: var(--bordo);
 }
-.hero p { margin: 3px 0 0; color: #722D4D; font-weight: 500; font-size: 13.5px; }
+.hero p { margin: 3px 0 0; color: var(--bordo); font-weight: 500; font-size: 13.5px; }
 .hero-flowers { width: 110px; height: auto; flex-shrink: 0; opacity: .9; }
 
 /* ---------- Estrutura ---------- */
@@ -123,7 +123,7 @@ input[type="text"], textarea {
   border: 1.5px solid var(--line);
   border-radius: 14px;
   padding: 11px 14px;
-  background: #fff;
+  background: var(--surf);
   color: var(--ink);
 }
 input[type="text"]::placeholder, textarea::placeholder { color: #B7A6AF; }
@@ -146,7 +146,7 @@ button {
 }
 button:hover { background: #A94A6E; }
 button:active { transform: scale(.97); }
-button.secondary { background: var(--petal); color: #722D4D; }
+button.secondary { background: var(--petal); color: var(--bordo); }
 button.secondary:hover { background: #EFD3DF; }
 button:focus-visible, .note-pick:focus-visible {
   outline: 3px solid var(--accent-soft);
@@ -175,7 +175,7 @@ button:focus-visible, .note-pick:focus-visible {
   border: 1.5px solid var(--line);
   border-radius: 16px;
   cursor: pointer;
-  background: #fff;
+  background: var(--surf);
   transition: background .15s, border-color .15s;
 }
 .note-pick:hover { background: var(--petal-light); }
@@ -196,7 +196,7 @@ button:focus-visible, .note-pick:focus-visible {
   font-family: var(--font-title);
   font-size: 24px;
   font-weight: 600;
-  color: #722D4D;
+  color: var(--bordo);
 }
 .editor-head input:focus { box-shadow: none; border-bottom-color: var(--accent-soft); }
 .editor-head button { padding: 8px 14px; }
@@ -205,7 +205,7 @@ button:focus-visible, .note-pick:focus-visible {
 
 /* ---------- Checklist ---------- */
 .checklist-title { display: flex; align-items: baseline; gap: 10px; }
-.checklist-title strong { font-family: var(--font-title); font-size: 17px; color: #722D4D; }
+.checklist-title strong { font-family: var(--font-title); font-size: 17px; color: var(--bordo); }
 .checklist-title .meta { margin: 0; }
 
 .progress {
@@ -239,7 +239,7 @@ button:focus-visible, .note-pick:focus-visible {
   flex-shrink: 0;
   border: 2px solid var(--accent-soft);
   border-radius: 8px 8px 8px 3px;
-  background: #fff;
+  background: var(--surf);
   cursor: pointer;
   display: grid;
   place-content: center;
@@ -322,12 +322,12 @@ button:focus-visible, .note-pick:focus-visible {
   margin: 0;
   font-family: var(--font-title);
   font-size: 24px;
-  color: #722D4D;
+  color: var(--bordo);
   overflow-wrap: anywhere;
 }
 
 .field { display: block; margin-bottom: 16px; }
-.field > span { display: block; margin-bottom: 5px; font-size: 13px; font-weight: 700; color: #722D4D; }
+.field > span { display: block; margin-bottom: 5px; font-size: 13px; font-weight: 700; color: var(--bordo); }
 .field #bodyText { margin-bottom: 0; }
 .fields {
   display: grid;
@@ -342,7 +342,7 @@ input[type="date"] {
   border: 1.5px solid var(--line);
   border-radius: 14px;
   padding: 10px 14px;
-  background: #fff;
+  background: var(--surf);
   color: var(--ink);
   font: inherit;
 }
@@ -365,7 +365,7 @@ input[type="date"]:focus {
   font-family: var(--font-title);
   font-weight: 600;
   font-size: 17px;
-  color: #722D4D;
+  color: var(--bordo);
 }
 .benefit { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .benefit-label { min-width: 70px; font-weight: 700; }
@@ -392,10 +392,10 @@ input[type="date"]:focus {
   padding: 6px 22px;
   border-radius: 999px;
   font-weight: 700;
-  color: #722D4D;
+  color: var(--bordo);
   transition: background .15s, color .15s;
 }
-.segmented input:checked + span { background: var(--accent); color: #fff; }
+.segmented input:checked + span { background: var(--accent); color: var(--on-pine); }
 .segmented input:focus-visible + span { outline: 3px solid rgba(196, 93, 131, .6); outline-offset: 2px; }
 
 .task .lock { display: inline-flex; padding: 3px 9px 0; color: #d9a3bf; }
@@ -437,7 +437,7 @@ input[type="date"]:focus {
 .score-actions-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .score-actions-row .score-msg { margin: 0 auto 0 0; font-size: 12.5px; color: var(--grafite-suave); font-style: italic; }
 .score-rewards-compact { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.score-rewards-compact .reward { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; border: 1.5px solid var(--line); background: #fff; color: var(--muted); display: inline-flex; gap: 5px; align-items: center; }
+.score-rewards-compact .reward { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surf); color: var(--muted); display: inline-flex; gap: 5px; align-items: center; }
 .score-rewards-compact .reward b { color: var(--bordo); }
 .score-rewards-compact .reward.got { background: var(--verde-bg); border-color: #9FC4A8; color: var(--verde); }
 .score-rewards-compact .reward.got em { font-style: normal; font-weight: 700; }
@@ -478,7 +478,7 @@ button.small { padding: 7px 13px; font-size: 12.5px; border-radius: 10px; }
   width: min(92vw, 380px);
   padding: 30px 26px 26px;
   text-align: center;
-  background: #fff;
+  background: var(--surf);
   border: 2px solid var(--line);
   border-radius: 34px 34px 34px 10px;
   box-shadow: 0 20px 50px rgba(114, 45, 77, .35);
@@ -494,7 +494,7 @@ button.small { padding: 7px 13px; font-size: 12.5px; border-radius: 10px; }
   line-height: 1.1;
   color: var(--accent);
 }
-.celebration-card h3 { margin: 0 0 8px; font-family: var(--font-title); font-size: 22px; color: #722D4D; }
+.celebration-card h3 { margin: 0 0 8px; font-family: var(--font-title); font-size: 22px; color: var(--bordo); }
 .celebration-card p { margin: 0 0 20px; color: var(--ink); }
 
 @media (max-width: 700px) {
@@ -545,7 +545,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; min-height: 
   padding: 10px 14px;
   border: 1.5px dashed var(--line);
   border-radius: 16px;
-  background: #fff;
+  background: var(--surf);
   color: #82566e;
 }
 .reward b { min-width: 46px; font-family: var(--font-title); font-size: 17px; color: #82566e; }
@@ -564,7 +564,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; min-height: 
 .reward-hint { margin: 0 0 14px; color: #82566e; font-size: 14px; }
 
 .rewards-form { width: 100%; display: grid; gap: 10px; }
-.form-title { margin: 0; font-weight: 700; color: #722D4D; }
+.form-title { margin: 0; font-weight: 700; color: var(--bordo); }
 .reward-field { display: flex; align-items: center; gap: 12px; }
 .reward-field span { min-width: 46px; font-family: var(--font-title); font-weight: 600; font-size: 17px; color: var(--accent); }
 .reward-field input { flex: 1; min-width: 0; }
@@ -578,7 +578,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; min-height: 
   background: var(--petal-light);
 }
 .celebration-reward small { display: block; margin-bottom: 2px; font-weight: 700; color: #82566e; }
-.celebration-reward strong { display: block; font-family: var(--font-title); font-size: 20px; color: #722D4D; overflow-wrap: anywhere; }
+.celebration-reward strong { display: block; font-family: var(--font-title); font-size: 20px; color: var(--bordo); overflow-wrap: anywhere; }
 
 @media (max-width: 700px) {
   .score .score-top h2 { font-size: 22px; }
@@ -610,7 +610,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; min-height: 
 }
 .status-banner[hidden] { display: none; }
 .status-banner .status-emoji { font-size: 28px; line-height: 1; }
-.status-banner.status-ok    { background: var(--petal-light); color: #722D4D; }
+.status-banner.status-ok    { background: var(--petal-light); color: var(--bordo); }
 .status-banner.status-cold  { background: #EEF4FA; border-color: #9EBAD6; color: #35597F; }
 .status-banner.status-angry { background: #FFF1F4; border-color: #E3A9B8; color: #9B2F4E; }
 .status-banner.status-done  { background: #e5f6e9; border-color: #a9d9b6; color: #2b6a3d; }
@@ -624,7 +624,7 @@ select {
   padding: 10px 14px;
   border: 1.5px solid var(--line);
   border-radius: 14px;
-  background: #fff;
+  background: var(--surf);
   color: var(--ink);
   font: inherit;
   text-overflow: ellipsis;
@@ -645,7 +645,7 @@ select:focus {
   border-radius: 18px;
 }
 .preview-box .field { margin-bottom: 0; }
-.check { display: flex; align-items: center; gap: 12px; font-weight: 700; color: #722D4D; cursor: pointer; }
+.check { display: flex; align-items: center; gap: 12px; font-weight: 700; color: var(--bordo); cursor: pointer; }
 .check input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
@@ -655,7 +655,7 @@ select:focus {
   flex-shrink: 0;
   border: 2px solid var(--accent-soft);
   border-radius: 8px 8px 8px 3px;
-  background: #fff;
+  background: var(--surf);
   cursor: pointer;
   display: grid;
   place-content: center;
@@ -688,14 +688,14 @@ select:focus {
 .trash-list { display: grid; gap: 10px; margin-top: 14px; }
 .trash-item {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 16px; background: #FFFAFC;
+  padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 16px; background: var(--surf);
 }
 .trash-info { display: grid; gap: 2px; min-width: 0; }
 .trash-info strong { font-size: 15px; color: var(--ink); }
 .trash-info small { font-size: 12px; color: var(--muted); }
 .trash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-button.danger { background: #FFF5F8; color: #A2455F; border: 1.5px solid #EBC3D1; }
-button.danger:hover { background: #F7DCE5; }
+button.danger { background: color-mix(in srgb, var(--red-app) 8%, var(--surf)); color: var(--red-app); border: 1.5px solid color-mix(in srgb, var(--red-app) 30%, var(--line)); }
+button.danger:hover { background: color-mix(in srgb, var(--red-app) 14%, var(--surf)); }
 
 
 /* ---------- Ícones (Lucide) ---------- */

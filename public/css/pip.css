@@ -24,7 +24,7 @@ body.pip::before, body.pip::after { content: none; display: none; }
   font-size: 26px;
   font-weight: 700;
   line-height: 1.1;
-  color: #722D4D;
+  color: var(--bordo);
 }
 .pip-win { display: flex; gap: 6px; flex-shrink: 0; }
 .pip-win button { padding: 6px 12px; font-size: 12px; }
@@ -57,7 +57,7 @@ body.pip::before, body.pip::after { content: none; display: none; }
   color: #9c2a5f;
 }
 .chip:hover { background: #ffc7dd; }
-.chip[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--on-pine); }
 .pip-filters input[type="text"] { padding: 8px 12px; font-size: 13px; }
 .pip-datebar { display: flex; gap: 6px; align-items: center; }
 .pip-datebar input[type="date"] { flex: 1; min-height: 38px; padding: 6px 10px; font-size: 13px; }
@@ -79,7 +79,7 @@ body.pip::before, body.pip::after { content: none; display: none; }
   gap: 4px;
   border: 1.5px solid var(--line);
   border-radius: 14px;
-  background: #fff;
+  background: var(--surf);
 }
 .pip-note.admissao { border-left: 5px solid var(--accent-soft); }
 .pip-note.rescisao { border-left: 5px solid #c9a7e8; }
