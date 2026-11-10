@@ -96,6 +96,8 @@ function atualizarCabecalho() {
 
 function iniciarCabecalho() {
   atualizarCabecalho();
+  // mantém a saudação e a data certas com o app aberto (troca de período/meia-noite)
+  setInterval(atualizarCabecalho, 60000);
   const alvo = document.querySelector('#kpiStrip');
   if (alvo) new MutationObserver(atualizarCabecalho).observe(alvo, {
     subtree: true, childList: true, characterData: true,
