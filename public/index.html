@@ -148,26 +148,41 @@
           </div>
         </form>
 
-                <div class="pend-board" id="pendBoard">
-          <div class="pend-col" data-bucket="atrasadas">
-            <h3>Atrasadas <span class="pill-count"></span></h3>
-            <div class="pend-list" data-bucket="atrasadas"></div>
-          </div>
-          <div class="pend-col" data-bucket="hoje">
-            <h3>Para hoje <span class="pill-count"></span></h3>
-            <div class="pend-list" data-bucket="hoje"></div>
-          </div>
-          <div class="pend-col" data-bucket="semana">
-            <h3>Para esta semana <span class="pill-count"></span></h3>
-            <div class="pend-list" data-bucket="semana"></div>
-          </div>
-          <div class="pend-col" data-bucket="futuras">
-            <h3>Pendências futuras <span class="pill-count"></span></h3>
-            <div class="pend-list" data-bucket="futuras"></div>
-          </div>
-        </div>
-        <div class="pend-list-view" id="pendListView" hidden></div>
-      </section>
+                <div class="pending-board">
+    <section class="pending-section">
+      <header class="pending-section-header">
+        Atrasadas
+      </header>
+      <div class="pending-cards">
+        <div class="pend-list" data-bucket="atrasadas"></div>
+      </div>
+    </section>
+    <section class="pending-section">
+      <header class="pending-section-header">
+        Para hoje
+      </header>
+      <div class="pending-cards">
+        <div class="pend-list" data-bucket="hoje"></div>
+      </div>
+    </section>
+    <section class="pending-section">
+      <header class="pending-section-header">
+        Para esta semana
+      </header>
+      <div class="pending-cards">
+        <div class="pend-list" data-bucket="semana"></div>
+      </div>
+    </section>
+    <section class="pending-section">
+      <header class="pending-section-header">
+        Pendências futuras
+      </header>
+      <div class="pending-cards">
+        <div class="pend-list" data-bucket="futuras"></div>
+      </div>
+    </section>
+  </div>
+  <div class="pend-list-view" id="pendListView" hidden></div>
 
       <section class="score panel" aria-label="Desempenho e gamificação">
         <div id="scoreBox"><p class="score-loading">Carregando pontuação…</p></div>
