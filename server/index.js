@@ -867,7 +867,7 @@ app.use(express.static(PUBLIC_DIR, {
     // CSS tem versão na URL (?v=...): pode ficar em cache por muito tempo.
     // JS é conferido rapidamente a cada visita (resposta 304, sem baixar de novo).
     res.setHeader('Cache-Control',
-      filePath.endsWith('.css') ? 'public, max-age=31536000, immutable' : 'no-cache');
+      filePath.endsWith('.css') ? 'public, max-age=3600' : 'no-cache');
   },
 }));
 
