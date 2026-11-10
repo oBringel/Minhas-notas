@@ -223,7 +223,7 @@ function rowHtml(e) {
 }
 
 function renderPendencias() {
-  const board = $('#pendBoard');
+  const board = $('.pending-board');
   const listView = $('#pendListView');
   if (!board || !listView) return;
 
@@ -249,11 +249,12 @@ function renderPendencias() {
       futuras: 'Sem pendências futuras.',
     };
     for (const b of BUCKETS) {
-      const list = board.querySelector(`.pend-list[data-bucket="${b}"]`);
-      const count = board.querySelector(`.pend-col[data-bucket="${b}"] .pill-count`);
+      const section = board.querySelector(`.pending-section[data-bucket="${b}"]`);
+      const list = section?.querySelector('.pending-cards .pend-list[data-bucket="${b}"]');
+      const countEl = section?.querySelector('.pending-section-header .pill-count');
       if (!list) continue;
       const items = filtered.filter((e) => e.bucket === b);
-      if (count) count.textContent = items.length || '';
+      if (countEl) countEl.textContent = items.length || '';
       list.innerHTML = items.length
         ? items.map(cardHtml).join('')
         : `<p class="pend-empty">${vazios[b]}</p>`;
