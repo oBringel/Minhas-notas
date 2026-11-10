@@ -14,6 +14,7 @@
 
   --pine: #A62D5B;
   --pine2: #F8E1E9;
+  --on-pine: #fff;
   --bg-app: #FBF5F4;
   --surf: #ffffff;
   --ink-app: #2B1620;
@@ -95,6 +96,7 @@
   --amb-app: #F0A464; --amb2: #3A2A1B;
   --blue-app: #8DB4EE; --blue2: #1E2B40;
   --pine: #F08FB0;
+  --on-pine: #16100F;
   --shadow: 0 2px 10px rgba(0, 0, 0, .35);
   color-scheme: dark;
 }
@@ -232,7 +234,7 @@ button.small, .button.small, label.button.small { min-height: 40px; padding: 0 1
 .view button:not(.icon-btn):not(.pend-pt):not(.view-btn):not(.cal-view-btn):not(.kpi):not(.side-btn):not(.chip):not(.menu-toggle):not(.cal-day):not(.cal-filter):not(.cal-yitem):not(.cal-ylink):not(.cal-nav):not(.cal-year-btn):not(.cal-holiday):not(.cal-chip),
 .button, label.button {
   background: var(--pine);
-  color: #fff;
+  color: var(--on-pine);
   border: 0;
   min-height: 44px;
   padding: 0 18px;
@@ -241,6 +243,21 @@ button.small, .button.small, label.button.small { min-height: 40px; padding: 0 1
 }
 .view button:not(.icon-btn):not(.pend-pt):not(.view-btn):not(.cal-view-btn):not(.kpi):not(.side-btn):not(.chip):not(.menu-toggle):not(.cal-day):not(.cal-filter):not(.cal-yitem):not(.cal-ylink):not(.cal-nav):not(.cal-year-btn):not(.cal-holiday):not(.cal-chip):hover,
 .button:hover, label.button:hover { filter: brightness(1.06); }
+/* Botões preenchidos que ficam fora das telas: editor lateral, PIP e
+   rodapé de avisos. Sem isto eles herdavam a cor do texto do painel e
+   ficavam escuros sobre o fundo escuro. */
+.drawer button:not(.secondary):not(.ghost):not(.remove):not(.icon-btn),
+.pip button:not(.secondary):not(.ghost):not(.remove):not(.icon-btn),
+.notice-bar button.small:not(.secondary):not(.ghost) {
+  background: var(--pine);
+  color: var(--on-pine);
+  border: 0;
+  font-weight: 600;
+}
+.drawer button:not(.secondary):not(.ghost):not(.remove):not(.icon-btn):hover,
+.pip button:not(.secondary):not(.ghost):not(.remove):not(.icon-btn):hover,
+.notice-bar button.small:not(.secondary):not(.ghost):hover { filter: brightness(1.08); }
+
 button.secondary, button.ghost, .secondary, .ghost {
   background: var(--surf) !important;
   color: var(--ink-app) !important;
