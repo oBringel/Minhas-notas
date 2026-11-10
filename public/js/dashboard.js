@@ -185,11 +185,11 @@ function metaHtml(e) {
 
 function cardHtml(e) {
   const it = e.item;
+  const ptTitle = it.source === 'auto' ? 'Atividade automática (1 ponto ao concluir no módulo)' : (it.done ? 'Concluída (+1 ponto) — clique para reabrir' : 'Marcar concluída (+1 ponto)');
   return `<div class="pend-item ${it.done ? 'done' : ''} ${e.isLate ? 'is-late' : ''} pri-${it.priority || 'media'}"
        data-eid="${escapeHtml(String(it.id || ''))}" data-source="${it.source}"
        data-note="${it.noteId || ''}" data-vac="${it.vacationId || ''}">
-    <input type="checkbox" data-act="toggle" ${it.done ? 'checked' : ''}
-      ${it.source === 'auto' ? 'disabled title="Atividade automática — conclua no módulo de origem"' : ''} aria-label="Concluir" />
+    <button type="button" class="pend-pt${it.done ? ' is-done' : ''}" data-act="toggle" ${it.source === 'auto' ? 'disabled' : ''} title="${escapeHtml(ptTitle)}" aria-label="${it.done ? 'Reabrir' : 'Concluir'}">1</button>
     <div>
       <strong>${escapeHtml(it.text || 'Atividade')}</strong>
       ${it.employee ? `<small>${escapeHtml(it.employee)}</small>` : ''}
@@ -205,11 +205,11 @@ function cardHtml(e) {
 
 function rowHtml(e) {
   const it = e.item;
+  const ptTitle = it.source === 'auto' ? 'Atividade automática (1 ponto ao concluir no módulo)' : (it.done ? 'Concluída (+1 ponto) — clique para reabrir' : 'Marcar concluída (+1 ponto)');
   return `<div class="pend-row ${it.done ? 'done' : ''} ${e.isLate ? 'is-late' : ''}"
        data-eid="${escapeHtml(String(it.id || ''))}" data-source="${it.source}"
        data-note="${it.noteId || ''}" data-vac="${it.vacationId || ''}">
-    <input type="checkbox" data-act="toggle" ${it.done ? 'checked' : ''}
-      ${it.source === 'auto' ? 'disabled' : ''} aria-label="Concluir" />
+    <button type="button" class="pend-pt${it.done ? ' is-done' : ''}" data-act="toggle" ${it.source === 'auto' ? 'disabled' : ''} title="${escapeHtml(ptTitle)}" aria-label="${it.done ? 'Reabrir' : 'Concluir'}">1</button>
     <div class="pr-main"><strong>${escapeHtml(it.text || 'Atividade')}</strong>${it.employee ? `<small>${escapeHtml(it.employee)}</small>` : ''}</div>
     <div class="pr-col">${escapeHtml(e.moduleLabel)}</div>
     <div class="pr-col">${it.dueDate ? formatDate(it.dueDate) : '<span class="muted">—</span>'}</div>
@@ -332,6 +332,13 @@ function bindPendActions(root) {
     if (!e) return;
     const act = btn.dataset.act;
 
+    if (act === 'toggle') {
+      if (e.item.source === 'auto') return;
+      try { await api.setPendenciaDone(e.item.id, !e.item.done); await carregar(); }
+      catch (err) { ctx.toast(err.message); renderPendencias(); }
+      return;
+    }
+
     if (act === 'open') return openAction(e);
 
     if (e.item.source === 'auto') return;
@@ -343,15 +350,6 @@ function bindPendActions(root) {
       try { await api.deletePendencia(e.item.id); await carregar(); }
       catch (err) { ctx.toast(err.message); }
     }
-  });
-
-  root.addEventListener('change', async (ev) => {
-    const cb = ev.target.closest('input[data-act="toggle"]');
-    if (!cb) return;
-    const row = cb.closest('[data-eid]');
-    if (!row || row.dataset.source === 'auto') return;
-    try { await api.setPendenciaDone(row.dataset.eid, cb.checked); await carregar(); }
-    catch (err) { ctx.toast(err.message); renderPendencias(); }
   });
 }
 
