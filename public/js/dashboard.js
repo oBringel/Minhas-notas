@@ -115,6 +115,9 @@ function enrich(item) {
   } else if (item.done) {
     situation = 'concluida';
   }
+  // Ensure bucket is always one of the four valid values
+  const validBuckets = ['atrasadas', 'hoje', 'semana', 'futuras'];
+  if (!validBuckets.includes(bucket)) bucket = 'futuras';
   return {
     item, bucket, situation, due,
     isLate: !!due && !item.done && daysBetween(due, today) < 0,
@@ -189,7 +192,7 @@ function cardHtml(e) {
   return `<div class="pend-item ${it.done ? 'done' : ''} ${e.isLate ? 'is-late' : ''} pri-${it.priority || 'media'}"
        data-eid="${escapeHtml(String(it.id || ''))}" data-source="${it.source}"
        data-note="${it.noteId || ''}" data-vac="${it.vacationId || ''}">
-    <button type="button" class="pend-pt${it.done ? ' is-done' : ''}" data-act="toggle" ${it.source === 'auto' ? 'disabled' : ''} title="${escapeHtml(ptTitle)}" aria-label="${it.done ? 'Reabrir' : 'Concluir'}">1</button>
+    <button type="button" class="pend-pt${it.done ? ' is-done' : ''}" data-act="toggle" ${it.source === 'auto' ? 'disabled' : ""} title="${escapeHtml(ptTitle)}" aria-label="${it.done ? 'Reabrir' : 'Concluir'}">1</button>
     <div>
       <strong>${escapeHtml(it.text || 'Atividade')}</strong>
       ${it.employee ? `<small>${escapeHtml(it.employee)}</small>` : ''}
@@ -209,15 +212,15 @@ function rowHtml(e) {
   return `<div class="pend-row ${it.done ? 'done' : ''} ${e.isLate ? 'is-late' : ''}"
        data-eid="${escapeHtml(String(it.id || ''))}" data-source="${it.source}"
        data-note="${it.noteId || ''}" data-vac="${it.vacationId || ''}">
-    <button type="button" class="pend-pt${it.done ? ' is-done' : ''}" data-act="toggle" ${it.source === 'auto' ? 'disabled' : ''} title="${escapeHtml(ptTitle)}" aria-label="${it.done ? 'Reabrir' : 'Concluir'}">1</button>
-    <div class="pr-main"><strong>${escapeHtml(it.text || 'Atividade')}</strong>${it.employee ? `<small>${escapeHtml(it.employee)}</small>` : ''}</div>
+    <button type="button" class="pend-pt${it.done ? ' is-done' : ""}" data-act="toggle" ${it.source === 'auto' ? 'disabled' : ""} title="${escapeHtml(ptTitle)}" aria-label="${it.done ? 'Reabrir' : 'Concluir'}">1</button>
+    <div class="pr-main"><strong>${escapeHtml(it.text || 'Atividade')}</strong>${it.employee ? `<small>${escapeHtml(it.employee)}</small>` : ""}</div>
     <div class="pr-col">${escapeHtml(e.moduleLabel)}</div>
     <div class="pr-col">${it.dueDate ? formatDate(it.dueDate) : '<span class="muted">—</span>'}</div>
     <div class="pr-col"><span class="tag ${it.priority || 'media'}">${it.priority || 'média'}</span> ${situationTag(e)}</div>
     <div class="pend-actions">
       <button type="button" class="icon-btn" data-act="open" title="Abrir">${icon('external-link', { size: 14 })}</button>
       ${it.source !== 'auto' ? `<button type="button" class="icon-btn" data-act="edit" title="Editar">${icon('pencil', { size: 14 })}</button>
-      <button type="button" class="icon-btn" data-act="del" title="Excluir">${icon('trash-2', { size: 14 })}</button>` : ''}
+      <button type="button" class="icon-btn" data-act="del" title="Excluir">${icon('trash-2', { size: 14 })}</button>` : ""}
     </div>
   </div>`;
 }
@@ -250,11 +253,15 @@ function renderPendencias() {
     };
     for (const b of BUCKETS) {
       const section = board.querySelector(`.pending-section[data-bucket="${b}"]`);
-      const list = section?.querySelector('.pending-cards .pend-list[data-bucket="${b}"]');
-      const countEl = section?.querySelector('.pending-section-header .pill-count');
-      if (!list) continue;
+      if (!section) { console.warn('Section not found for bucket', b); continue; }
+      const list = section.querySelector('.pending-cards .pend-list[data-bucket="${b}"]');
+      if (!list) { console.warn('List not found for bucket', b); continue; }
+      const countEl = section.querySelector('.pending-section-header .pill-count');
+      // Filter items for this bucket
       const items = filtered.filter((e) => e.bucket === b);
+      // Update pill count
       if (countEl) countEl.textContent = items.length || '';
+      // Render cards into the correct list
       list.innerHTML = items.length
         ? items.map(cardHtml).join('')
         : `<p class="pend-empty">${vazios[b]}</p>`;
